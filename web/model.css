@@ -1,0 +1,77 @@
+.card {
+    font-family: arial;
+    font-size: 20px;
+    text-align: left;
+    color: black;
+    background-color: white;
+}
+
+.card img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.irx-row:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.irx-text {
+    float: left;
+    width: 70%;
+}
+
+.irx-images {
+    float: left;
+    width: 30%;
+    font-size: 16px;
+}
+
+.irx-images img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+}
+
+.irx-images div {
+    text-align: center;
+}
+
+a.irx-extract-link {
+    background-color: #1F8A70;
+    color: black;
+    text-decoration: none;
+}
+
+a.irx-extract-link-soon {
+    background-color: #FFE11A;
+    color: black;
+    text-decoration: none;
+}
+
+a.irx-extract-link-later {
+    background-color: #FD7400;
+    color: black;
+    text-decoration: none;
+}
+
+.irx-removed {
+    color: white;
+    font-style: italic;
+    background-color: #262626;	
+}
+
+.irx-info {
+    font-size: 16px;
+    font-style: italic;
+    background-color: lavenderblush;
+    color: deeppink
+}
+[irx-display-removed~="no"].irx-removed { display: none; }
+[irx-overlay~="on"].irx-highlight.bold { font-weight: bold; }
+[irx-overlay~="on"].irx-highlight.italic { font-style: italic; }
+[irx-overlay~="on"].irx-highlight.strike { text-decoration: line-through; }
+[irx-overlay~="on"].irx-highlight.underline { text-decoration: underline; }
