@@ -65,7 +65,7 @@ class ReadingManager:
             mw.viewManager.addMenuItems()
             mw.viewManager.addShortcuts()
             addMenuItem("Read", "Update IRX Model", self.setupIrxModel)
-            addMenuItem("Read", "Aboud", showAbout)
+            addMenuItem("Read", "About", showAbout)
             for keys, action in self.settings["my_custom_shortcuts"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
                     addShortcut(action, keys)
