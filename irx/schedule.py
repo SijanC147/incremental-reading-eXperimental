@@ -2,20 +2,11 @@
 
 from __future__ import unicode_literals, division
 from random import gauss, shuffle
-import logging
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QAbstractItemView,
-    QDialog,
-    QDialogButtonBox,
-    QHBoxLayout,
-    QListWidget,
-    QTreeView,
-    QStandardItemModel,
-    QStandardItem,
-    QListWidgetItem,
-    QPushButton,
+    QAbstractItemView, QDialog, QDialogButtonBox, QHBoxLayout, QListWidget,
+    QTreeView, QStandardItemModel, QStandardItem, QListWidgetItem, QPushButton,
     QVBoxLayout
 )
 
@@ -39,7 +30,12 @@ class Scheduler:
 
     def populate_organizer(self, cardInfo):
         self.cardTreeModel = QStandardItemModel()
-        self.cardTreeModel.setHorizontalHeaderLabels(['ID', 'Position','Type', 'Queue', 'Title', 'Due','Interval','Reps','Lapses'])
+        self.cardTreeModel.setHorizontalHeaderLabels(
+            [
+                'ID', 'Position', 'Type', 'Queue', 'Title', 'Due', 'Interval',
+                'Reps', 'Lapses'
+            ]
+        )
         self.cardTreeWidget.setModel(self.cardTreeModel)
 
         queue_types = {
@@ -79,17 +75,9 @@ class Scheduler:
             lapses.setEditable(False)
             title = QStandardItem(str(card["title"]))
             title.setEditable(False)
-            self.cardTreeModel.appendRow([
-                cid, 
-                pos,
-                ctype,
-                queue,
-                title,
-                due,
-                interval,
-                reps,
-                lapses
-                ])
+            self.cardTreeModel.appendRow(
+                [cid, pos, ctype, queue, title, due, interval, reps, lapses]
+            )
 
     def update_organizer(self, mark_card=None):
         if self.cardTreeWidget.isVisible():
@@ -185,12 +173,18 @@ class Scheduler:
             newPos = gauss(newPos, newPos / 10)
 
         cardNote = card.note()
-        setField(cardNote, self.settings["titleField"], getField(cardNote, self.settings["titleField"]) + ease_str)
+        setField(
+            cardNote, self.settings["titleField"],
+            getField(cardNote, self.settings["titleField"]) + ease_str
+        )
         cardNote.flush()
-        
+
         newPos = max(1, int(newPos))
         self.reposition(card, newPos, from_extract)
-        tooltip("Ok, we'll get back to that <b>{}</b> <br/><i>moved to position <b>{}</b></i>".format(tooltip_message, newPos))
+        tooltip(
+            "Ok, we'll get back to that <b>{}</b> <br/><i>moved to position <b>{}</b></i>"
+            .format(tooltip_message, newPos)
+        )
         self.update_organizer(card)
 
     def doneWithNote(self):
@@ -198,17 +192,23 @@ class Scheduler:
         current_note = current_card.note()
         title = getField(current_note, "Title")
         mw.col.sched.suspendCards([c.id for c in current_note.cards()])
-        tooltip("<b><font color='purple'>Done</font></b> with <b>{}</b>".format(title))
+        tooltip(
+            "<b><font color='purple'>Done</font></b> with <b>{}</b>".
+            format(title)
+        )
         mw.reset()
         self.update_organizer(mark_card=current_card)
 
     def reposition(self, card, newPos, from_extract=False):
-        cids = [c['id'] for c in self._getCardInfo(card.did, suspended=False, buried=False)]
-        if from_extract: 
+        cids = [
+            c['id']
+            for c in self._getCardInfo(card.did, suspended=False, buried=False)
+        ]
+        if from_extract:
             cids = list(set(cids) - set([mw.reviewer.card.id]))
         mw.col.sched.forgetCards(cids)
         cids.remove(card.id)
-        newOrder = cids[:newPos-1] + [card.id] + cids[newPos-1:]
+        newOrder = cids[:newPos - 1] + [card.id] + cids[newPos - 1:]
         if from_extract:
             newOrder = [mw.reviewer.card.id] + newOrder
         mw.col.sched.sortCards(newOrder)
@@ -218,35 +218,43 @@ class Scheduler:
         mw.col.sched.sortCards(cids)
 
     def _moveUp(self):
-        selected = [self.cardListWidget.item(i)
-                    for i in range(self.cardListWidget.count())
-                    if self.cardListWidget.item(i).isSelected()]
+        selected = [
+            self.cardListWidget.item(i)
+            for i in range(self.cardListWidget.count())
+            if self.cardListWidget.item(i).isSelected()
+        ]
         for item in selected:
             row = self.cardListWidget.row(item)
             newRow = max(0, row - 1)
             self.cardListWidget.insertItem(
-                newRow, self.cardListWidget.takeItem(row))
+                newRow, self.cardListWidget.takeItem(row)
+            )
             item.setSelected(True)
 
     def _moveDown(self):
-        selected = [self.cardListWidget.item(i)
-                    for i in range(self.cardListWidget.count())
-                    if self.cardListWidget.item(i).isSelected()]
+        selected = [
+            self.cardListWidget.item(i)
+            for i in range(self.cardListWidget.count())
+            if self.cardListWidget.item(i).isSelected()
+        ]
         selected.reverse()
         for item in selected:
             row = self.cardListWidget.row(item)
             newRow = min(self.cardListWidget.count(), row + 1)
             self.cardListWidget.insertItem(
-                newRow, self.cardListWidget.takeItem(row))
+                newRow, self.cardListWidget.takeItem(row)
+            )
             item.setSelected(True)
 
     def _randomize(self):
-        allItems = [self.cardListWidget.takeItem(0)
-                    for i in range(self.cardListWidget.count())]
+        allItems = [
+            self.cardListWidget.takeItem(0)
+            for i in range(self.cardListWidget.count())
+        ]
         shuffle(allItems)
         for item in allItems:
             self.cardListWidget.addItem(item)
-            
+
     def _getCardInfo(self, did, mark_card=None, suspended=True, buried=True):
         cardInfo = []
 
@@ -258,21 +266,25 @@ class Scheduler:
             excl = "({})".format(",".join([suspended, buried]))
             query += " and queue not in {}".format(excl)
 
-        for cid, nid, ctype, queue, due, ivl, reps, lapses in mw.col.db.execute(query, did):
+        for cid, nid, ctype, queue, due, ivl, reps, lapses in mw.col.db.execute(
+            query, did
+        ):
             note = mw.col.getNote(nid)
             if note.model()['name'] == self.settings['modelName']:
                 title = "[*]" if mark_card and cid == mark_card.id else ""
                 title += "[C]" if mw.reviewer.card and cid == mw.reviewer.card.id else ""
                 title += " "
-                cardInfo.append({
-                    'id': cid,
-                    'nid': nid,
-                    'type': ctype,
-                    'queue': queue,
-                    'due': due,
-                    'interval': ivl,
-                    'reps': reps,
-                    'lapses': lapses,
-                    'title': title + note[self.settings['titleField']]
-                })
+                cardInfo.append(
+                    {
+                        'id': cid,
+                        'nid': nid,
+                        'type': ctype,
+                        'queue': queue,
+                        'due': due,
+                        'interval': ivl,
+                        'reps': reps,
+                        'lapses': lapses,
+                        'title': title + note[self.settings['titleField']]
+                    }
+                )
         return cardInfo

@@ -11,7 +11,7 @@ from PyQt4.QtWebKit import QWebPage
 from anki import notes
 from anki.hooks import addHook, wrap
 from anki.sound import clearAudioQueue
-from aqt import mw, dialogs 
+from aqt import mw, dialogs
 from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
 from aqt.reviewer import Reviewer
@@ -24,17 +24,10 @@ from irx.settings import SettingsManager
 from irx.schedule import Scheduler
 from irx.text import TextManager
 from irx.util import (
-    addMenuItem,
-    addShortcut,
-    disableOutdated,
-    getField,
-    isIrxCard,
-    setField,
-    viewingIrxText,
-    loadFile,
-    db_log
+    addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
+    viewingIrxText, loadFile, db_log
 )
-from irx.view import ViewManager 
+from irx.view import ViewManager
 
 
 class ReadingManager:
@@ -60,8 +53,12 @@ class ReadingManager:
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem("Read", "Options...", self.settingsManager.showDialog, "Alt+1")
-            addMenuItem("Read", "Organizer...", self.scheduler.showDialog, "Alt+2")
+            addMenuItem(
+                "Read", "Options...", self.settingsManager.showDialog, "Alt+1"
+            )
+            addMenuItem(
+                "Read", "Organizer...", self.scheduler.showDialog, "Alt+2"
+            )
             mw.viewManager.addMenuItems()
             mw.viewManager.addShortcuts()
             addMenuItem("Read", "Update IRX Model", self.setupIrxModel)
@@ -72,7 +69,6 @@ class ReadingManager:
             self.controlsLoaded = True
 
         mw.viewManager.resetZoom("deckBrowser")
-    
 
     def setupIrxModel(self):
         model = mw.col.models.new(self.settings["modelName"])
@@ -83,31 +79,38 @@ class ReadingManager:
         mw.col.models.addField(model, titleField)
         mw.col.models.addField(model, textField)
         mw.col.models.addField(model, sourceField)
-        model["css"] = loadFile('web','model.css')
+        model["css"] = loadFile('web', 'model.css')
         template = self.makeTemplate(
-            name="IRX Card", 
-            question=loadFile("web", "question.html"), 
+            name="IRX Card",
+            question=loadFile("web", "question.html"),
             answer=loadFile("web", "answer.html")
         )
         mw.col.models.addTemplate(model, template)
         mw.col.models.add(model)
-    
+
     def makeTemplate(self, name, question, answer):
         template = mw.col.models.newTemplate(name)
         try:
             for field in re.findall(r"\{\{([^\s]+)\}\}", question):
-                question = question.replace("{{%s}}"%field, "{{%s}}"%self.settings[field+"Field"])
+                question = question.replace(
+                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"]
+                )
         except KeyError as e:
-            raise KeyError("The question template contains an invalid key: {}".format(e))
+            raise KeyError(
+                "The question template contains an invalid key: {}".format(e)
+            )
         try:
             for field in re.findall(r"\{\{([^\s]+)\}\}", answer):
-                answer = answer.replace("{{%s}}"%field, "{{%s}}"%self.settings[field+"Field"])
+                answer = answer.replace(
+                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"]
+                )
         except KeyError as e:
-            raise KeyError("The answer template contains an invalid key: {}".format(e))
+            raise KeyError(
+                "The answer template contains an invalid key: {}".format(e)
+            )
         template["qfmt"] = question
         template["afmt"] = answer
         return template
-    
 
     def restoreView(self):
         if viewingIrxText():
@@ -176,11 +179,9 @@ class ReadingManager:
 
         # Sean: Added intelligen way to mirror the deck from IR to non IR
         intelli_deck_name = (
-            mw.col.decks.get(card.did)["name"].replace(
-                "Incremental Reading::", ""
-            )
-            if quickKey["deckName"] == "[Mirror]"
-            else quickKey["deckName"]
+            mw.col.decks.get(card.did
+                            )["name"].replace("Incremental Reading::", "")
+            if quickKey["deckName"] == "[Mirror]" else quickKey["deckName"]
         )
         deckId = mw.col.decks.byName(intelli_deck_name)
         if not deckId:
@@ -251,7 +252,9 @@ def answerButtonList(self, _old):
             # (3, "<font color='blue'>" + _("Custom") + "</font>"),
         )
         if page_bottom == card_pos or page_bottom == 0:
-            answers_button_list += ((5, "<font color='purple'>" + _("Done") + "</font>"),)
+            answers_button_list += (
+                (5, "<font color='purple'>" + _("Done") + "</font>"),
+            )
         return answers_button_list
     else:
         return _old(self)
@@ -265,7 +268,7 @@ def answerCard(self, ease, _old):
 
 
 def buttonTime(self, i, _old):
-        return "<div class=spacer></div>" if isIrxCard(self.card) else _old(self, i)
+    return "<div class=spacer></div>" if isIrxCard(self.card) else _old(self, i)
 
 
 def LinkHandler(self, evt, _old):
@@ -288,14 +291,19 @@ def LinkHandler(self, evt, _old):
 
 def keyHandler(self, evt, _old):
     key = unicode(evt.text())
-    custom_hotkeys = {key:val for key,val in mw.readingManager.settings["my_custom_shortcuts"].items() if len(key) == 1}
+    custom_hotkeys = {
+        key: val
+        for key, val in mw.readingManager.settings["my_custom_shortcuts"].
+        items() if len(key) == 1
+    }
     handled = False
 
     if viewingIrxText() and key in custom_hotkeys.keys():
         custom_hotkeys[key]()
         handled = True
-        
-    return handled or _old(self,evt)
+
+    return handled or _old(self, evt)
+
 
 def defaultEase(self, _old):
     current_card = self.card
@@ -306,10 +314,12 @@ def defaultEase(self, _old):
     else:
         return _old(self)
 
-Reviewer._answerButtonList = wrap(Reviewer._answerButtonList, answerButtonList, "around")
+
+Reviewer._answerButtonList = wrap(
+    Reviewer._answerButtonList, answerButtonList, "around"
+)
 Reviewer._answerCard = wrap(Reviewer._answerCard, answerCard, "around")
 Reviewer._buttonTime = wrap(Reviewer._buttonTime, buttonTime, "around")
 Reviewer._linkHandler = wrap(Reviewer._linkHandler, LinkHandler, "around")
 Reviewer._keyHandler = wrap(Reviewer._keyHandler, keyHandler, 'around')
 Reviewer._defaultEase = wrap(Reviewer._defaultEase, defaultEase, "around")
-
