@@ -5,36 +5,54 @@ import os
 import io
 import stat
 import time
+from datetime import datetime
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut
 
+from BeautifulSoup import BeautifulSoup as bs4
 
 from aqt import mw
 from aqt.utils import showInfo
 
 
 def isIrxCard(card):
-    if (card and (card.model().get("name") == mw.readingManager.settings['modelName'])):
+    if (
+        card and
+        (card.model().get("name") == mw.readingManager.settings['modelName'])
+    ):
         return True
     else:
         return False
 
 
 def viewingIrxText():
-    if (isIrxCard(mw.reviewer.card) and
-            (mw.reviewer.state == 'question') and
-            (mw.state == 'review')):
+    if (
+        isIrxCard(mw.reviewer.card) and (mw.reviewer.state == 'question') and
+        (mw.state == 'review')
+    ):
         return True
     else:
         return False
+
 
 def irx_siblings(parent_note):
     parent_field = "irxnid:{}".format(parent_note.id)
     irx_model = mw.col.models.byName(mw.readingManager.settings["modelName"])
     irx_notes = [mw.col.getNote(nid) for nid in mw.col.models.nids(irx_model)]
-    sibling_notes = [note for note in irx_notes if getField(note, mw.readingManager.settings["pidField"])==parent_field]
+    sibling_notes = [
+        note for note in irx_notes if
+        getField(note, mw.readingManager.settings["pidField"]) == parent_field
+    ]
     return sibling_notes
+
+
+def timestamp_id():
+    return int(time.time() * 100)
+
+
+def pretty_date():
+    datetime.now().strftime("%A, %d %B %Y %H:%M")
 
 
 def addMenu(fullName):
@@ -51,27 +69,46 @@ def addMenu(fullName):
     if menuName not in mw.customMenus:
         menu = QMenu('&' + menuName, mw)
         mw.customMenus[menuName] = menu
-        mw.form.menubar.insertMenu(mw.form.menuTools.menuAction(), mw.customMenus[menuName])
+        mw.form.menubar.insertMenu(
+            mw.form.menuTools.menuAction(), mw.customMenus[menuName]
+        )
 
     if hasSubMenu and (fullName not in mw.customMenus):
         subMenu = QMenu('&' + subMenuName, mw)
         mw.customMenus[fullName] = subMenu
         mw.customMenus[menuName].addMenu(subMenu)
 
+
 def db_log(data, title=None, lim=None):
     if not mw.db.editor.dialog.isVisible():
         mw.db.show()
     if isinstance(data, dict):
-        mw.db.log("{0}{1} \n -----------------------------".format(
-            "{} \n".format(title) if title else "",
-            "\n".join(["{0}: {1}".format(k,v[:lim]) if lim else "{0}: {1}".format(k,v) for k,v in data.items()])))
+        mw.db.log(
+            "{0}{1} \n -----------------------------".format(
+                "{} \n".format(title) if title else "", "\n".join(
+                    [
+                        "{0}: {1}".format(k, v[:lim])
+                        if lim else "{0}: {1}".format(k, v)
+                        for k, v in data.items()
+                    ]
+                )
+            )
+        )
     elif isinstance(data, str):
         data = data[:lim] if lim else data
-        mw.db.log("{0}{1} \n -----------------------------".format(
-            "{} \n".format(title) if title else "", data))
-    else: 
-        mw.db.log("{0}{1} \n -----------------------------".format(
-            "{} \n".format(title) if title else "", str(data)[:lim] if lim else str(data)))
+        mw.db.log(
+            "{0}{1} \n -----------------------------".format(
+                "{} \n".format(title) if title else "", data
+            )
+        )
+    else:
+        mw.db.log(
+            "{0}{1} \n -----------------------------".format(
+                "{} \n".format(title) if title else "",
+                str(data)[:lim] if lim else str(data)
+            )
+        )
+
 
 def addMenuItem(menuName, text, function, keys=None):
     action = QAction(text, mw)
@@ -132,13 +169,17 @@ def disableOutdated():
             os.rename(path, path + '.old')
             disabled = True
     if disabled:
-        showInfo('One or more outdated add-on files have been deactivated.', ' Please restart Anki.')
+        showInfo(
+            'One or more outdated add-on files have been deactivated.',
+            ' Please restart Anki.'
+        )
 
 
 def updateModificationTime(path):
     accessTime = os.stat(path)[stat.ST_ATIME]
     modificationTime = time.time()
     os.utime(path, (accessTime, modificationTime))
+
 
 def loadFile(fileDir, filename):
     moduleDir, _ = os.path.split(__file__)
