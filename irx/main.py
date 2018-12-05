@@ -34,7 +34,7 @@ from irx.util import (
     loadFile,
     db_log
 )
-from irx.view import ViewManager
+from irx.view import ViewManager 
 
 
 class ReadingManager:
