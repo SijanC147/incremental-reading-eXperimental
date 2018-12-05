@@ -22,7 +22,7 @@ from aqt.utils import getText, showInfo, tooltip
 from BeautifulSoup import BeautifulSoup
 
 
-from irx.util import getField, setField, db_log
+from irx.util import getField, setField, db_log, irx_siblings
 
 
 class TextManager:
@@ -115,27 +115,31 @@ class TextManager:
                 newNote, did, self.settings["modelName"]
             )
         else:
-            current_title = getField(currentNote, self.settings["titleField"])
-            current_title_version = re.match(r"(^[0-9\.]+)", current_title)
-            if current_title_version:
-                current_title_version = current_title_version.group()
-                extract_title = current_title.replace(
-                    current_title_version,
-                    current_title_version + str(self.children_extracts) + ".",
-                )
-                self.children_extracts += 1
-                setField(newNote, self.settings["titleField"], extract_title)
-                newNote.model()["did"] = did
-                mw.col.addNote(newNote)
-            else:
-                setField(
-                    newNote,
-                    self.settings["titleField"],
-                    str(self.children_extracts)+". "+current_title
-                )
-                newNote.model()["did"] = did
-                mw.col.addNote(newNote)
+            setField(newNote, self.settings["titleField"], self.next_version_number(currentNote))
+            newNote.model()["did"] = did
+            mw.col.addNote(newNote)
             highlight = True
+            # current_title = getField(currentNote, self.settings["titleField"])
+            # current_title_version = re.match(r"(^[0-9\.]+)", current_title)
+            # if current_title_version:
+            #     current_title_version = current_title_version.group()
+            #     extract_title = current_title.replace(
+            #         current_title_version,
+            #         current_title_version + str(self.children_extracts) + ".",
+            #     )
+            #     self.children_extracts += 1
+            #     setField(newNote, self.settings["titleField"], extract_title)
+            #     newNote.model()["did"] = did
+            #     mw.col.addNote(newNote)
+            # else:
+            #     setField(
+            #         newNote,
+            #         self.settings["titleField"],
+            #         str(self.children_extracts)+". "+current_title
+            #     )
+            #     newNote.model()["did"] = did
+            #     mw.col.addNote(newNote)
+            # highlight = True
 
         if highlight:
             if schedule_extract:
@@ -153,6 +157,25 @@ class TextManager:
             
             self.save(note_linked=newNote)
             
+    def next_version_number(self, parent_note):
+        parent_version = re.match(r"(^[0-9\.]+)", getField(parent_note, self.settings["titleField"]))
+        if parent_version:
+            parent_version = parent_version.group()
+        else:
+            parent_version = "1."
+        siblings = irx_siblings(parent_note)
+        sibling_count = len(siblings)
+        next_version = sibling_count+1
+        version_ok = False
+        while not(version_ok):
+            candidate_version = "{0}{1}.".format(parent_version, str(next_version))
+            sibling_versions = [getField(sibling, self.settings["titleField"])[:len(candidate_version)] for sibling in siblings]
+            version_ok = candidate_version not in sibling_versions
+            if version_ok:
+                return candidate_version
+            next_version += 1
+
+    
     def extract_image(self, remove_src=False):
         if mw.web.selectedText() and remove_src:
             mw.web.triggerPageAction(QWebPage.Copy)
@@ -272,7 +295,7 @@ class TextManager:
                 mw.readingManager.scheduler.update_organizer()
                 tooltip_msg += "<br/> Deleted note: {}".format(linked_title)
             except TypeError:
-                linked_title = last_action["TITLE"]
+                linked_title = last_action.get("TITLE", last_action.get("LINKED NOTE", "?"))
                 tooltip_msg += "<br/> Linked note [{}] not found, maybe already deleted?".format(linked_title)
             last_action = self.history[currentNote.id].pop()
         currentNote["Text"] = last_action

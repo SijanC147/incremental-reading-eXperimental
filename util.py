@@ -29,6 +29,13 @@ def viewingIrxText():
     else:
         return False
 
+def irx_siblings(parent_note):
+    parent_field = "irxnid:{}".format(parent_note.id)
+    irx_model = mw.col.models.byName(mw.readingManager.settings["modelName"])
+    irx_notes = [mw.col.getNote(nid) for nid in mw.col.models.nids(irx_model)]
+    sibling_notes = [note for note in irx_notes if getField(note, mw.readingManager.settings["pidField"])==parent_field]
+    return sibling_notes
+
 
 def addMenu(fullName):
     if not hasattr(mw, 'customMenus'):
