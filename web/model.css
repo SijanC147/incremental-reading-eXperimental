@@ -58,6 +58,13 @@ a.irx-extract-link-later {
     text-decoration: none;
 }
 
+a.irx-extract-link:hover,
+a.irx-extract-link-soon:hover,
+a.irx-extract-link-later:hover {
+    color: blue
+}
+
+
 .irx-removed {
     color: white;
     font-style: italic;
