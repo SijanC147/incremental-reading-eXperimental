@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+import sys
 import os
 import io
 import stat
@@ -34,6 +35,14 @@ def viewingIrxText():
         return True
     else:
         return False
+
+
+def mac_fix(keys):
+    if sys.platform == "darwin":
+        keys = keys.replace("Ctrl", "Cmd")
+        keys = keys.replace("Alt", "Opt")
+        keys = keys.replace("Meta", "Ctrl")
+    return keys
 
 
 def irx_siblings(parent_note):

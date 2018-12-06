@@ -1,0 +1,33 @@
+IRX_REVIEWER = {
+    "toggle images": "Shift+m",
+    "toggle formatting": "Shift+f",
+    "toggle removed text": "Shift+z",
+    "toggle extracts": "Shift+x",
+    "done (suspend)": "!",
+    "undo": "u",
+    "add image": "@",
+    "add image (skip caption)": "Shift+@",
+    "extract image": "m",
+    "extract image (skip caption)": "Shift+m",
+    "extract important": "1",
+    "extract complimentary": "2",
+    "extract important (and edit)": "Alt+1",
+    "extract complimentary (and edit)": "Alt+2",
+    "bold": "Ctrl+b",
+    "underline": "Ctrl+u",
+    "italic": "Ctrl+i",
+    "strikethrough": "Ctrl+s",
+    "remove": "z",
+    "show reading list": "Ctrl+Alt+2",
+    "show image manager": "i",
+    "show help": "?",
+}
+
+IRX_IMAGE_MANAGER = {
+    "edit image caption": "e",
+    "mark image(s) for deletion": "d",
+    "take image(s) (for reordering)": "t",
+    "place image(s) above (for reordering)": "a",
+    "place image(s) below (for reordering)": "b",
+    "submit image changes": "Enter",
+}
