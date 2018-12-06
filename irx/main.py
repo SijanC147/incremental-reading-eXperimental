@@ -72,13 +72,10 @@ class ReadingManager:
 
     def setupIrxModel(self):
         model = mw.col.models.new(self.settings["modelName"])
-        titleField = mw.col.models.newField(self.settings["titleField"])
-        textField = mw.col.models.newField(self.settings["textField"])
-        sourceField = mw.col.models.newField(self.settings["sourceField"])
-        sourceField["sticky"] = True
-        mw.col.models.addField(model, titleField)
-        mw.col.models.addField(model, textField)
-        mw.col.models.addField(model, sourceField)
+        fields = []
+        for k, v in self.settings.items():
+            if k[-5:] == "Field":
+                mw.col.models.addField(model, mw.col.models.newField(v))
         model["css"] = loadFile('web', 'model.css')
         template = self.makeTemplate(
             name="IRX Card",
@@ -91,18 +88,20 @@ class ReadingManager:
     def makeTemplate(self, name, question, answer):
         template = mw.col.models.newTemplate(name)
         try:
-            for field in re.findall(r"\{\{([^\s]+)\}\}", question):
+            for field in re.findall(r"\{\{([^\s]+?)\}\}", question):
                 question = question.replace(
-                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"]
+                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"],
+                    1
                 )
         except KeyError as e:
             raise KeyError(
                 "The question template contains an invalid key: {}".format(e)
             )
         try:
-            for field in re.findall(r"\{\{([^\s]+)\}\}", answer):
+            for field in re.findall(r"\{\{([^\s]+?)\}\}", answer):
                 answer = answer.replace(
-                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"]
+                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"],
+                    1
                 )
         except KeyError as e:
             raise KeyError(
@@ -145,7 +144,7 @@ class ReadingManager:
 
         hasSelection = False
         selectedText = ""
-        self.textManager.toggleDisplayRemoved("no")
+        self.textManager.toggle_show_removed("no")
 
         if len(mw.web.selectedText()) > 0:
             hasSelection = True

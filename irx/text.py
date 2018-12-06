@@ -8,7 +8,6 @@ import base64
 from os.path import normpath, basename, join, exists
 import cPickle as pickle
 from cStringIO import StringIO
-from irx.lib import imghdr
 
 from PyQt4.QtGui import (
     QApplication, QImage, QAbstractItemView, QDialog, QDialogButtonBox, QPixmap,
@@ -23,7 +22,7 @@ from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
 from aqt.utils import getText, showInfo, tooltip
 
-from BeautifulSoup import BeautifulSoup as bs4
+from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
 from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id
 
@@ -62,23 +61,36 @@ class TextManager:
         self.save()
 
     def format(self, style):
+        # current_view = mw.web.page().mainFrame().toHtml()
+        # soup = bs(current_view)
+        # text_div = soup.find("div", {"class": "irx-text"})
+        # db_log(text_div.contents)
         mw.web.eval('format("%s")' % style)
         self.save()
 
-    def toggleDisplayRemoved(self, manual=None):
-        manual = manual or "toggle"
-        mw.web.eval('toggleDisplayRemoved("%s")' % manual)
+    def linkNote(self, note, extract_type=""):
+        mw.web.eval('linkToNote("%s", "%s")' % (note.id, extract_type))
+        self.save(note_linked=note)
 
-    def toggleOverlay(self):
-        mw.web.eval("toggleOverlay()")
+    def toggle_images_sidebar(self, manual=None):
+        mw.web.eval('toggleImagesSidebar("%s")' % (manual or "toggle"))
+        mw.reviewer.card.note().flush()
 
-    def linkNote(self, note_id, extract_type=""):
-        mw.web.eval('linkToNote("%s", "%s")' % (note_id, extract_type))
-        self.save()
+    def toggle_show_removed(self, manual=None):
+        mw.web.eval('toggleShowRemoved("%s")' % (manual or "toggle"))
+        mw.reviewer.card.note().flush()
+
+    def toggle_show_formatting(self, manual=None):
+        mw.web.eval('toggleShowFormatting("%s")' % (manual or "toggle"))
+        mw.reviewer.card.note().flush()
+
+    def toggle_show_extracts(self, manual=None):
+        mw.web.eval('toggleShowExtracts("%s")' % (manual or "toggle"))
+        mw.reviewer.card.note().flush()
 
     def manage_images(self, note=None):
         note = note or mw.reviewer.card.note()
-        soup = bs4(getField(note, self.settings["imagesField"]))
+        soup = bs(getField(note, self.settings["imagesField"]))
         history = []
 
         def image_list(soup):
@@ -263,6 +275,10 @@ class TextManager:
 
         setField(new_note, self.settings["textField"], text)
         setField(
+            new_note, self.settings["imagesField"],
+            getField(current_note, self.settings["imagesField"])
+        )
+        setField(
             new_note, self.settings["sourceField"],
             getField(current_note, self.settings["sourceField"])
         )
@@ -297,11 +313,11 @@ class TextManager:
                 new_note, self.settings["titleField"],
                 self.next_version_number(current_note)
             )
-            new_note.model()["did"] = did
-            mw.col.addNote(new_note)
             highlight = True
 
         if highlight:
+            new_note.model()["did"] = did
+            mw.col.addNote(new_note)
             if schedule_extract:
                 cards = new_note.cards()
                 if cards:
@@ -309,15 +325,9 @@ class TextManager:
                         cards[0], schedule_extract, from_extract=True
                     )
             if schedule_extract == 1:
-                self.linkNote(new_note.id, "soon")
-                # self.highlight(custom_key="irx_schedule_soon")
+                self.linkNote(new_note, "soon")
             elif schedule_extract == 2:
-                self.linkNote(new_note.id, "later")
-                # self.highlight(custom_key="irx_schedule_later")
-            # else:
-            # self.highlight(custom_key="irx_extract")
-
-            self.save(note_linked=new_note)
+                self.linkNote(new_note, "later")
 
     def next_version_number(self, parent_note):
         parent_version = re.match(
@@ -359,7 +369,7 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             images = []
-            soup = bs4(mime_data.html())
+            soup = bs(mime_data.html())
             for media_path in [img.get('src') for img in soup.findAll('img')]:
                 try:
                     img_data = urllib2.urlopen(media_path).read()
@@ -372,16 +382,12 @@ class TextManager:
                         img_data = urllib2.urlopen(media_path).read()
                     except urllib2.URLError as url_exception:
                         tooltip(
-                            "There was a problem getting an {}:\n {}".format(
+                            "There was a problem getting {}:\n {}".format(
                                 media_path, url_exception
                             )
                         )
                         continue
-                img_type = imghdr("", h=img_data)
-                if not img_type:
-                    tooltip("Could not import {}".format(media_path))
-                else:
-                    images.append(img_data)
+                images.append(img_data)
             if not images:
                 showInfo("Could not find any images to extract")
                 return
@@ -455,66 +461,74 @@ class TextManager:
         self.save()
 
     def save(self, note_linked=None):
-        note = mw.reviewer.card.note()
-        if note_linked:
-            self.history[note.id].append(
+        current_view = mw.web.page().mainFrame().toHtml()
+        soup = bs(current_view)
+        text_div = soup.find("div", {"class": "irx-text"})
+        # db_log(text_div.contents)
+        images_div = soup.find("div", {"class": "irx-images"})
+        if text_div:
+            current_note = mw.reviewer.card.note()
+            self.history[current_note.id].append(
                 {
-                    "LINKED NOTE": note_linked.id,
-                    "TITLE:":
-                        getField(note_linked, self.settings["titleField"])
+                    "text": current_note["Text"],
+                    "images": current_note["Images"],
+                    "action":
+                        {
+                            "type":
+                                "irx-extract",
+                            "nid":
+                                note_linked.id,
+                            "title":
+                                getField(
+                                    note_linked, self.settings["titleField"]
+                                )
+                        } if note_linked else {}
                 }
             )
-        else:
-
-            def removeOuterDiv(html):
-                withoutOpenDiv = re.sub("^<div[^>]+>", "", unicode(html))
-                withoutCloseDiv = re.sub("</div>$", "", withoutOpenDiv)
-                return withoutCloseDiv
-
-            page = mw.web.page().mainFrame().toHtml()
-            soup = bs4(page)
-            irTextDiv = soup.find("div", {"class": "irx-text"})
-
-            if irTextDiv:
-                self.history[note.id].append(note["Text"])
-                withoutDiv = removeOuterDiv(irTextDiv)
-                note["Text"] = unicode(withoutDiv)
-                note.flush()
-        self.write_history()
+            current_note["Text"] = "".join(
+                [
+                    unicode(c) for c in text_div.contents if
+                    not (isinstance(c, bs_tag) and c.get('class') == "irx-sep")
+                ]
+            )
+            images_content = "".join([unicode(c) for c in images_div.contents])
+            for src in re.findall(r"src=\"([^\"]+)", images_content):
+                images_content = images_content.replace(
+                    src, urllib2.unquote(src)
+                )
+            current_note["Images"] = images_content
+            current_note.flush()
+            self.write_history()
 
     def undo(self):
-        currentNote = mw.reviewer.card.note()
-        note_title = getField(currentNote, "Title")
-        if (
-            currentNote.id not in self.history or
-            not self.history[currentNote.id]
-        ):
-            tooltip("No undo history for {}".format(note_title))
+        current_note = mw.reviewer.card.note()
+        current_note_title = getField(current_note, "Title")
+        history = self.history.get(current_note.id)
+        if not history:
+            tooltip("No undo history for {}".format(current_note_title))
             return
 
-        tooltip_msg = "Undone"
-        last_action = self.history[currentNote.id].pop()
-        if isinstance(last_action, dict):
-            linked_nid = last_action["LINKED NOTE"]
-            try:
-                linked_note = mw.col.getNote(linked_nid)
-                linked_title = getField(linked_note, "Title")
-                mw.col.remNotes([linked_nid])
-                mw.readingManager.scheduler.update_organizer()
-                tooltip_msg += "<br/> Deleted note: {}".format(linked_title)
-            except TypeError:
-                linked_title = last_action.get(
-                    "TITLE", last_action.get("LINKED NOTE", "?")
-                )
-                tooltip_msg += "<br/> Linked note [{}] not found, maybe already deleted?".format(
-                    linked_title
-                )
-            last_action = self.history[currentNote.id].pop()
-        currentNote["Text"] = last_action
-        currentNote.flush()
-        mw.reset()
-        tooltip(tooltip_msg)
+        msg = "Undone"
+        save_data = self.history[current_note.id].pop()
         self.write_history()
+        action = save_data.get("action")
+        if action and action["type"] == "irx-extract":
+            extract_nid = action["nid"]
+            try:
+                extract = mw.col.getNote(extract_nid)
+                extract_title = getField(extract, self.settings["titleField"])
+                mw.col.remNotes([extract_nid])
+                mw.readingManager.scheduler.update_organizer()
+                msg += "<br/> Deleted note: {}".format(extract_title)
+            except TypeError:
+                msg += "<br/> Linked note [{}] no longer exists.".format(
+                    action["title"]
+                )
+        current_note["Text"] = save_data["text"]
+        current_note["Images"] = save_data["images"]
+        current_note.flush()
+        mw.reset()
+        tooltip(msg)
 
     def write_history(self):
         pickle.dump(

@@ -40,11 +40,15 @@ from irx.util import (
 class SettingsManager():
     def __init__(self):
         self.my_custom_shortcuts = {
+            "i": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
+            "s": lambda: mw.readingManager.textManager.toggle_show_formatting(),
+            "q": lambda: mw.readingManager.textManager.toggle_show_removed(),
+            "r": lambda: mw.readingManager.textManager.toggle_show_extracts(),
             "!": lambda: mw.readingManager.scheduler.doneWithNote(),
             "u": lambda: mw.readingManager.textManager.undo(),
             "?": lambda: mw.readingManager.textManager.extract_image(),
             "@": lambda: mw.readingManager.scheduler.doneWithNote(),
-            "i": lambda: mw.readingManager.textManager.manage_images(),
+            # "i": lambda: mw.readingManager.textManager.manage_images(),
             # "Ctrl+Shift+0": lambda: mw.readingManager.textManager.extract(),
             "Ctrl+Shift+1": lambda: mw.readingManager.textManager.extract(schedule_extract=1),
             "Ctrl+Shift+2": lambda: mw.readingManager.textManager.extract(schedule_extract=2),
@@ -55,12 +59,14 @@ class SettingsManager():
             "Ctrl+Shift+7": lambda: mw.readingManager.textManager.format("underline"),
             "Ctrl+Shift+8": lambda: mw.readingManager.textManager.format("italic"),
             "Ctrl+Shift+9": lambda: mw.readingManager.textManager.format("strike"),
-            "Ctrl+Shift+Alt+0": lambda: mw.readingManager.textManager.toggleOverlay(),
-            "Ctrl+Shift+Alt+1": lambda: mw.readingManager.textManager.toggleDisplayRemoved(),
-            "Ctrl+Shift+Alt+2": lambda: mw.readingManager.textManager.remove(),
-            "Ctrl+Shift+Alt+3": lambda: mw.readingManager.textManager.undo(),
-            "Ctrl+Shift+Alt+4": lambda: mw.readingManager.textManager.extract_image(),
-            "Ctrl+Shift+Alt+5": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
+            "Ctrl+Shift+Alt+0": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
+            "Ctrl+Shift+Alt+1": lambda: mw.readingManager.textManager.toggle_show_formatting(),
+            "Ctrl+Shift+Alt+2": lambda: mw.readingManager.textManager.toggle_show_removed(),
+            "Ctrl+Shift+Alt+3": lambda: mw.readingManager.textManager.toggle_show_extracts(),
+            "Ctrl+Shift+Alt+4": lambda: mw.readingManager.textManager.remove(),
+            "Ctrl+Shift+Alt+5": lambda: mw.readingManager.textManager.undo(),
+            "Ctrl+Shift+Alt+6": lambda: mw.readingManager.textManager.extract_image(),
+            "Ctrl+Shift+Alt+7": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
             "Ctrl+Alt+2": lambda: mw.readingManager.scheduler.showDialog(),
         }
         self.highlight_colors = {

@@ -1,5 +1,7 @@
-var formatting = "on";
-var displayRemoved = "no";
+var imagesSidebar = "yes";
+var showFormatting = "yes";
+var showRemoved = "no";
+var showExtracts = "yes";
 
 function highlight(bgColor, textColor) {
     if (window.getSelection) {
@@ -98,7 +100,7 @@ function removeText() {
     var span = document.createElement("span");
 
     span.className = "irx-removed";
-    span.setAttribute("irx-display-removed", displayRemoved);
+    span.setAttribute("irx-show-removed", displayRemoved);
     span.appendChild(selectedText);
 
     selection.insertNode(span);
@@ -107,13 +109,20 @@ function removeText() {
 function linkToNote(note_id, extract_type) {
     var selection = window.getSelection().getRangeAt(0);
     var selectedText = selection.extractContents();
-    var note_link = document.createElement("a");
 
-    note_link.className = "irx-extract-link-" + extract_type;
+
+    var note_link = document.createElement("a");
+    note_link.className = "irx-link"
     note_link.setAttribute("href", "irxnid:" + note_id)
     note_link.appendChild(selectedText);
 
-    selection.insertNode(note_link);
+    var note_span = document.createElement("span");
+    var extract_span_class = "irx-extract-link-" + extract_type
+    note_span.className = "irx-extract " + extract_span_class;
+    note_span.setAttribute("irx-show-extracts", showExtracts);
+    note_span.appendChild(note_link)
+
+    selection.insertNode(note_span);
 }
 
 function format(style) {
@@ -121,39 +130,75 @@ function format(style) {
     var selectedText = selection.extractContents();
     var span = document.createElement("span");
 
-    span.className = "irx-highlight " + style;
-    span.setAttribute("irx-overlay", formatting);
+    span.className = "irx-format " + style;
+    span.setAttribute("irx-show-formatting", showFormatting);
     span.appendChild(selectedText);
 
     selection.insertNode(span);
 }
 
-function toggleDisplayRemoved(state) {
-    if (state == "toggle") {
-        if (displayRemoved == "no") {
-            displayRemoved = "yes";
+function toggleImagesSidebar(manual) {
+    var text = document.getElementsByClassName("irx-text")[0];
+    var images = document.getElementsByClassName("irx-images")[0];
+    if (manual == "toggle") {
+        if (imagesSidebar == "no") {
+            imagesSidebar = "yes";
         } else {
-            displayRemoved = "no";
+            imagesSidebar = "no";
         }
     } else {
-        displayRemoved = state
+        imagesSidebar = manual
     }
-    var elems = document.getElementsByClassName("irx-removed");
+    text.setAttribute("irx-images-sidebar", imagesSidebar)
+    images.setAttribute("irx-images-sidebar", imagesSidebar)
+}
+
+
+function toggleShowExtracts(manual) {
+    if (manual == "toggle") {
+        if (showExtracts == "no") {
+            showExtracts = "yes";
+        } else {
+            showExtracts = "no";
+        }
+    } else {
+        showExtracts = manual
+    }
+    var elems = document.getElementsByClassName("irx-extract");
     for (var i = 0; i < elems.length; i++) {
-        elems[i].setAttribute("irx-display-removed", displayRemoved)
+        elems[i].setAttribute("irx-show-extracts", showExtracts)
     }
 }
 
-function toggleOverlay() {
-    if (formatting == "on") {
-        formatting = "off";
-        turnoffHighlighting();
+
+function toggleShowRemoved(manual) {
+    if (manual == "toggle") {
+        if (showRemoved == "no") {
+            showRemoved = "yes";
+        } else {
+            showRemoved = "no";
+        }
     } else {
-        formatting = "on";
-        restoreHighlighting();
+        showRemoved = manual
     }
-    var elems = document.getElementsByClassName("irx-highlight");
+    var elems = document.getElementsByClassName("irx-removed");
     for (var i = 0; i < elems.length; i++) {
-        elems[i].setAttribute("irx-overlay", formatting)
+        elems[i].setAttribute("irx-show-removed", showRemoved)
+    }
+}
+
+function toggleShowFormatting(manual) {
+    if (manual == "toggle") {
+        if (showFormatting == "yes") {
+            showFormatting = "no";
+        } else {
+            showFormatting = "yes";
+        }
+    } else {
+        showFormatting = manual
+    }
+    var elems = document.getElementsByClassName("irx-format");
+    for (var i = 0; i < elems.length; i++) {
+        elems[i].setAttribute("irx-show-formatting", showFormatting)
     }
 }
