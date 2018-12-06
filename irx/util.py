@@ -52,7 +52,7 @@ def timestamp_id():
 
 
 def pretty_date():
-    datetime.now().strftime("%A, %d %B %Y %H:%M")
+    return datetime.now().strftime("%A, %d %B %Y %H:%M")
 
 
 def addMenu(fullName):
