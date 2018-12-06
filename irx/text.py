@@ -7,6 +7,8 @@ from io import BytesIO
 import base64
 from os.path import normpath, basename, join, exists
 import cPickle as pickle
+from cStringIO import StringIO
+from irx.lib import imghdr
 
 from PyQt4.QtGui import (
     QApplication, QImage, QAbstractItemView, QDialog, QDialogButtonBox, QPixmap,
@@ -375,12 +377,11 @@ class TextManager:
                             )
                         )
                         continue
-                img = QImage()
-                img.loadFromData(img_data)
-                if not img or img.format() == 0:
-                    tooltip("Qt could not load {}".format(media_path))
+                img_type = imghdr("", h=img_data)
+                if not img_type:
+                    tooltip("Could not import {}".format(media_path))
                 else:
-                    images.append(img)
+                    images.append(img_data)
             if not images:
                 showInfo("Could not find any images to extract")
                 return
@@ -407,15 +408,17 @@ class TextManager:
                 filename = media.stripIllegal(caption[:50])
                 while exists(join(media.dir(), filename)):
                     filename += "_1"
-                filename += ".jpg"
-                buf = QBuffer()
-                buf.open(QBuffer.ReadWrite)
-                image.save(buf, "JPG", quality=100)
-                media.writeData(filename, buf.data())
+                try:
+                    media.writeData(filename, image.getvalue())
+                except AttributeError:
+                    buf = QBuffer()
+                    buf.open(QBuffer.ReadWrite)
+                    filename += ".jpg"
+                    image.save(buf, "JPG", quality=100)
+                    media.writeData(filename, buf.data())
                 images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'><span class='irx-caption'>{caption}</span></a></div>".format(
                     id=timestamp_id(), src=filename, caption=caption
                 )
-
         if images_templ:
             current_card = mw.reviewer.card
             current_note = current_card.note()
