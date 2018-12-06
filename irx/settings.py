@@ -40,7 +40,7 @@ from irx.util import (
 class SettingsManager():
     def __init__(self):
         self.my_custom_shortcuts = {
-            "i": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
+            # "i": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
             "s": lambda: mw.readingManager.textManager.toggle_show_formatting(),
             "q": lambda: mw.readingManager.textManager.toggle_show_removed(),
             "r": lambda: mw.readingManager.textManager.toggle_show_extracts(),
@@ -48,7 +48,7 @@ class SettingsManager():
             "u": lambda: mw.readingManager.textManager.undo(),
             "?": lambda: mw.readingManager.textManager.extract_image(),
             "@": lambda: mw.readingManager.scheduler.doneWithNote(),
-            # "i": lambda: mw.readingManager.textManager.manage_images(),
+            "i": lambda: mw.readingManager.textManager.manage_images(),
             # "Ctrl+Shift+0": lambda: mw.readingManager.textManager.extract(),
             "Ctrl+Shift+1": lambda: mw.readingManager.textManager.extract(schedule_extract=1),
             "Ctrl+Shift+2": lambda: mw.readingManager.textManager.extract(schedule_extract=2),

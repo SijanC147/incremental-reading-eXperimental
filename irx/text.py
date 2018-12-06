@@ -11,7 +11,8 @@ from cStringIO import StringIO
 
 from PyQt4.QtGui import (
     QApplication, QImage, QAbstractItemView, QDialog, QDialogButtonBox, QPixmap,
-    QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QVBoxLayout, QLabel
+    QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QVBoxLayout, QLabel,
+    QBrush, QColor
 )
 from PyQt4.QtWebKit import QWebPage
 from PyQt4.QtCore import Qt, QBuffer
@@ -121,22 +122,24 @@ class TextManager:
             return
 
         self.image_list_widget = QListWidget()
-        self.image_list_widget.setAlternatingRowColors(True)
         self.image_list_widget.setSelectionMode(
-            QAbstractItemView.SingleSelection
+            QAbstractItemView.ExtendedSelection
         )
         self.image_list_widget.setWordWrap(False)
         self.image_list_widget.setFixedSize(150, 250)
+
+        std_bg = QColor('#ffffff')
+        del_bg = QColor('#f0027f')
+        sel_bg = QColor('#386cb0')
 
         def populate_qlist(images, selected=0):
             self.image_list_widget.clear()
             if not images:
                 return
             for image in images:
-                text = (image["caption"][:20] + "..."
-                       ) if len(image["caption"]) > 20 else image["caption"]
-                item = QListWidgetItem("{}".format(text))
+                item = QListWidgetItem("{}".format(image["caption"]))
                 item.setData(Qt.UserRole, image)
+                item.setBackground(std_bg)
                 self.image_list_widget.addItem(item)
             self.image_list_widget.item(max(selected, 0)).setSelected(True)
             self.image_list_widget.update()
@@ -162,52 +165,49 @@ class TextManager:
         def key_handler(evt, _orig):
             key = unicode(evt.text())
             if key == "d":
-                selected = self.image_list_widget.selectedItems()
-                if selected:
-                    removed_item = selected[0].clone()
-                    removed_images = [
-                        h.data(Qt.UserRole)["id"] for h in history
-                    ]
-                    selected = [img["id"] for img in images].index(
-                        removed_item.data(Qt.UserRole)["id"]
-                    ) - 1
-                    history.append(removed_item)
-                    removed_images.append(removed_item.data(Qt.UserRole)["id"])
-                    images_left = [
-                        image
-                        for image in images if image["id"] not in removed_images
-                    ]
-                    populate_qlist(images_left, selected=selected)
-                    if not images_left:
-                        update_label(clear=True)
-            elif key == "u":
-                if history:
-                    last_removed = history.pop()
-                    removed_images = [
-                        h.data(Qt.UserRole)["id"] for h in history
-                    ]
-                    images_left = [
-                        image
-                        for image in images if image["id"] not in removed_images
-                    ]
-                    selected = [img["id"] for img in images_left].index(
-                        last_removed.data(Qt.UserRole)["id"]
-                    )
-                    populate_qlist(images_left, selected=selected)
+                for selected in self.image_list_widget.selectedItems():
+                    if selected.background() == std_bg:
+                        selected.setBackground(del_bg)
+                    elif selected.background() == del_bg:
+                        selected.setBackground(std_bg)
+                self.image_list_widget.update()
             elif key == "e":
                 selected = self.image_list_widget.selectedItems()
-                if selected:
+                if selected and len(selected) == 1:
                     selected_image = selected[0].data(Qt.UserRole)
-                    selected_row = self.image_list_widget.row(selected[0])
                     new_caption, _ = getText(
                         "Edit image caption:",
                         default=selected_image["caption"]
                     )
                     if new_caption:
-                        for image in images:
-                            if image["id"] == selected_image["id"]:
-                                image["caption"] = new_caption
-                        populate_qlist(images, selected=selected_row)
+                        selected[0].setText(new_caption)
+                        selected_image["caption"] = new_caption
+                        selected[0].setData(Qt.UserRole, selected_image)
+                        self.image_list_widget.update()
+                else:
+                    showInfo("Can only edit 1 image at a time")
+            elif key == "t":
+                for selected in self.image_list_widget.selectedItems():
+                    if selected.background() == std_bg:
+                        selected.setBackground(sel_bg)
+                    elif selected.background() == sel_bg:
+                        selected.setBackground(std_bg)
+            elif key == "p":
+                take_items = []
+                for i in range(self.image_list_widget.count()):
+                    if self.image_list_widget.item(i).background() == sel_bg:
+                        self.image_list_widget.item(i).setBackground(std_bg)
+                        take_items.append(self.image_list_widget.item(i))
+                if take_items:
+                    for item in take_items:
+                        self.image_list_widget.takeItem(
+                            self.image_list_widget.row(item)
+                        )
+                    for item in take_items[::-1]:
+                        self.image_list_widget.insertItem(
+                            self.image_list_widget.currentRow() + 1, item
+                        )
+                    self.image_list_widget.update()
             else:
                 return _orig(evt)
 
@@ -237,6 +237,7 @@ class TextManager:
         res = dialog.exec_()
 
         if res == 1:
+            self.save()
             images = [
                 "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'><span class='irx-caption'>{caption}</span></a></div>"
                 .format(
@@ -244,6 +245,7 @@ class TextManager:
                 ) for image in [
                     self.image_list_widget.item(index).data(Qt.UserRole)
                     for index in range(self.image_list_widget.count())
+                    if self.image_list_widget.item(index).background() != del_bg
                 ]
             ]
             setField(note, self.settings["imagesField"], "".join(images))
@@ -415,12 +417,12 @@ class TextManager:
                 while exists(join(media.dir(), filename)):
                     filename += "_1"
                 try:
-                    media.writeData(filename, image.getvalue())
-                except AttributeError:
+                    media.writeData(filename, image)
+                except TypeError:
                     buf = QBuffer()
                     buf.open(QBuffer.ReadWrite)
-                    filename += ".jpg"
-                    image.save(buf, "JPG", quality=100)
+                    filename += ".png"
+                    image.save(buf, "PNG", quality=65)
                     media.writeData(filename, buf.data())
                 images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'><span class='irx-caption'>{caption}</span></a></div>".format(
                     id=timestamp_id(), src=filename, caption=caption
