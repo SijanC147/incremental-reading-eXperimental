@@ -62,6 +62,7 @@ class ReadingManager:
             mw.viewManager.addMenuItems()
             mw.viewManager.addShortcuts()
             addMenuItem("Read", "Update IRX Model", self.setupIrxModel)
+            addMenuItem("Read", "Help", self.settingsManager.show_help)
             addMenuItem("Read", "About", showAbout)
             for keys, action in self.settings["my_custom_shortcuts"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
@@ -292,8 +293,8 @@ def keyHandler(self, evt, _old):
     key = unicode(evt.text())
     custom_hotkeys = {
         key: val
-        for key, val in mw.readingManager.settings["my_custom_shortcuts"].
-        items() if len(key) == 1
+        for key, val in mw.readingManager.settings["irx_controls"].items()
+        if len(key) == 1
     }
     handled = False
 
@@ -310,8 +311,7 @@ def defaultEase(self, _old):
         page_bottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
         card_pos = mw.readingManager.settings['scroll'][str(current_card.id)]
         return 5 if page_bottom == card_pos or page_bottom == 0 else 2
-    else:
-        return _old(self)
+    return _old(self)
 
 
 Reviewer._answerButtonList = wrap(

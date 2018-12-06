@@ -192,8 +192,9 @@ class TextManager:
                         selected.setBackground(sel_bg)
                     elif selected.background() == sel_bg:
                         selected.setBackground(std_bg)
-            elif key == "p":
+            elif key in ["a", "b"]:
                 take_items = []
+                row_offset = 1 if key == "b" else 0
                 for i in range(self.image_list_widget.count()):
                     if self.image_list_widget.item(i).background() == sel_bg:
                         self.image_list_widget.item(i).setBackground(std_bg)
@@ -205,7 +206,8 @@ class TextManager:
                         )
                     for item in take_items[::-1]:
                         self.image_list_widget.insertItem(
-                            self.image_list_widget.currentRow() + 1, item
+                            self.image_list_widget.currentRow() + row_offset,
+                            item
                         )
                     self.image_list_widget.update()
             else:
@@ -357,7 +359,7 @@ class TextManager:
                 return candidate_version
             next_version += 1
 
-    def extract_image(self, remove_src=False):
+    def extract_image(self, remove_src=False, skip_captions=False):
         if mw.web.selectedText() and remove_src:
             mw.web.triggerPageAction(QWebPage.Copy)
             self.remove()
@@ -399,18 +401,21 @@ class TextManager:
         texts = [t for t in mime_data.text().split("\n") if t]
         images_templ = ""
         for index, image in enumerate(images):
-            try:
-                caption, ret = getText(
-                    "Add a caption for the image",
-                    title="Extract Image",
-                    default=texts[index]
-                )
-            except IndexError:
-                caption, ret = getText(
-                    "Add a caption for the image",
-                    title="Extract Image",
-                    default=pretty_date()
-                )
+            if not skip_captions:
+                try:
+                    caption, ret = getText(
+                        "Add a caption for the image",
+                        title="Extract Image",
+                        default=texts[index]
+                    )
+                except IndexError:
+                    caption, ret = getText(
+                        "Add a caption for the image",
+                        title="Extract Image",
+                        default=pretty_date()
+                    )
+            else:
+                caption = pretty_date()
             if ret == 1:
                 media = mw.col.media
                 filename = media.stripIllegal(caption[:50])

@@ -34,40 +34,42 @@ from irx.util import (
     addMenuItem,
     removeComboBoxItem,
     setComboBoxItem,
-    updateModificationTime
+    updateModificationTime,
+    mac_fix,
+    db_log,
 )
+
+from irx.editable_controls import IRX_REVIEWER, IRX_IMAGE_MANAGER
+
+IRX_REVIEWER_ACTIONS = {
+    "toggle images": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
+    "toggle formatting": lambda: mw.readingManager.textManager.toggle_show_formatting(),
+    "toggle removed text": lambda: mw.readingManager.textManager.toggle_show_removed(),
+    "toggle extracts": lambda: mw.readingManager.textManager.toggle_show_extracts(),
+    "done (suspend)": lambda: mw.readingManager.scheduler.doneWithNote(),
+    "undo": lambda: mw.readingManager.textManager.undo(),
+    "add image": lambda: mw.readingManager.textManager.extract_image(),
+    "add image (skip caption)": lambda: mw.readingManager.textManager.extract_image(skip_captions=True),
+    "extract image": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
+    "extract image (skip caption)": lambda: mw.readingManager.textManager.extract_image(remove_src=True, skip_captions=True),
+    "extract important": lambda: mw.readingManager.textManager.extract(schedule_extract=1),
+    "extract complimentary": lambda: mw.readingManager.textManager.extract(schedule_extract=2),
+    "extract important (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=1),
+    "extract complimentary (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=2),
+    "bold": lambda: mw.readingManager.textManager.format("bold"),
+    "underline": lambda: mw.readingManager.textManager.format("underline"),
+    "italic": lambda: mw.readingManager.textManager.format("italic"),
+    "strikethrough": lambda: mw.readingManager.textManager.format("strike"),
+    "remove": lambda: mw.readingManager.textManager.remove(),
+    "show reading list": lambda: mw.readingManager.scheduler.showDialog(),
+    "show image manager": lambda: mw.readingManager.textManager.manage_images(),
+    "show help": lambda: mw.readingManager.settingsManager.show_help(), 
+}
 
 class SettingsManager():
     def __init__(self):
-        self.my_custom_shortcuts = {
-            # "i": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
-            "s": lambda: mw.readingManager.textManager.toggle_show_formatting(),
-            "q": lambda: mw.readingManager.textManager.toggle_show_removed(),
-            "r": lambda: mw.readingManager.textManager.toggle_show_extracts(),
-            "!": lambda: mw.readingManager.scheduler.doneWithNote(),
-            "u": lambda: mw.readingManager.textManager.undo(),
-            "?": lambda: mw.readingManager.textManager.extract_image(),
-            "@": lambda: mw.readingManager.scheduler.doneWithNote(),
-            "i": lambda: mw.readingManager.textManager.manage_images(),
-            # "Ctrl+Shift+0": lambda: mw.readingManager.textManager.extract(),
-            "Ctrl+Shift+1": lambda: mw.readingManager.textManager.extract(schedule_extract=1),
-            "Ctrl+Shift+2": lambda: mw.readingManager.textManager.extract(schedule_extract=2),
-            # "Ctrl+Shift+3": lambda: mw.readingManager.textManager.extract(also_edit=True),
-            "Ctrl+Shift+4": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=1),
-            "Ctrl+Shift+5": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=2),
-            "Ctrl+Shift+6": lambda: mw.readingManager.textManager.format("bold"),
-            "Ctrl+Shift+7": lambda: mw.readingManager.textManager.format("underline"),
-            "Ctrl+Shift+8": lambda: mw.readingManager.textManager.format("italic"),
-            "Ctrl+Shift+9": lambda: mw.readingManager.textManager.format("strike"),
-            "Ctrl+Shift+Alt+0": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
-            "Ctrl+Shift+Alt+1": lambda: mw.readingManager.textManager.toggle_show_formatting(),
-            "Ctrl+Shift+Alt+2": lambda: mw.readingManager.textManager.toggle_show_removed(),
-            "Ctrl+Shift+Alt+3": lambda: mw.readingManager.textManager.toggle_show_extracts(),
-            "Ctrl+Shift+Alt+4": lambda: mw.readingManager.textManager.remove(),
-            "Ctrl+Shift+Alt+5": lambda: mw.readingManager.textManager.undo(),
-            "Ctrl+Shift+Alt+6": lambda: mw.readingManager.textManager.extract_image(),
-            "Ctrl+Shift+Alt+7": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
-            "Ctrl+Alt+2": lambda: mw.readingManager.scheduler.showDialog(),
+        self.irx_controls = {
+            IRX_REVIEWER[action]:IRX_REVIEWER_ACTIONS[action] for action in IRX_REVIEWER_ACTIONS.keys() 
         }
         self.highlight_colors = {
             "irx_schedule_soon": ("#FFE11A", "#000000"),
@@ -80,6 +82,12 @@ class SettingsManager():
         self.settingsChanged = False
         self.loadSettings()
 
+        keys = IRX_REVIEWER.values()
+        duplicate_controls = list(set([key for key in keys if keys.count(key) > 1]))
+        if duplicate_controls:
+            showInfo("The following IRX shortcut(s) are assigned conflicting actions:<br/><br/>{}<br/><br/>Review and change them in editable_controls.py".format(" ".join(list(set(duplicate_controls)))))
+
+
         if self.settingsChanged:
             showInfo("""
                     Your Incremental Reading settings file has been modified
@@ -88,11 +96,45 @@ class SettingsManager():
 
         addHook('unloadProfile', self.saveSettings)
 
+    def show_help(self):
+        keys = IRX_REVIEWER.values()
+        duplicate_controls = list(set([key for key in keys if keys.count(key) > 1]))
+        help_text = "<table>"
+        actions = IRX_REVIEWER_ACTIONS.keys()
+        for i in range(0, len(actions), 2):
+            if IRX_REVIEWER[actions[i]] not in duplicate_controls:
+                hotkey_text = mac_fix(IRX_REVIEWER[actions[i]])
+            else:
+                hotkey_text = "<font color='red'>"+mac_fix(IRX_REVIEWER[actions[i]])+"</font>"
+            help_text += "<tr>"
+            help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(hotkey=hotkey_text,action=actions[i])
+            if i+1 < len(actions):
+                if IRX_REVIEWER[actions[i+1]] not in duplicate_controls:
+                    hotkey_text = mac_fix(IRX_REVIEWER[actions[i+1]])
+                else:
+                    hotkey_text = "<font color='red'>"+mac_fix(IRX_REVIEWER[actions[i+1]])+"</font>"
+                help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td>".format(hotkey=hotkey_text,action=actions[i+1])
+            else:
+                help_text += "<td style='padding: 5px'></td>"
+            help_text +="</tr>"
+        help_text += "</table>"
+        db_log(help_text)
+        help_dialog = QDialog(mw)
+        help_layout = QHBoxLayout()
+        help_label = QLabel()
+        help_label.setAlignment(Qt.AlignCenter)
+        help_label.setText(help_text)
+        help_layout.addWidget(help_label)
+        help_dialog.setLayout(help_layout)
+        help_dialog.setWindowModality(Qt.WindowModal)
+        help_dialog.exec_()
+
+
     def saveSettings(self):
-        with open(self.jsonPath, 'w', encoding='utf-8') as jsonFile:
-            self.settings["my_custom_shortcuts"] = self.settings["my_custom_hotkeys"] = {}
-            json.dump(self.settings, jsonFile)
-            self.settings["my_custom_shortcuts"] = self.my_custom_shortcuts 
+        with open(self.json_path, 'w', encoding='utf-8') as json_file:
+            self.settings["irx_controls"] = {}
+            json.dump(self.settings, json_file)
+            self.settings["irx_controls"] = self.irx_controls 
 
 
         updateModificationTime(self.mediaDir)
@@ -136,17 +178,17 @@ class SettingsManager():
         }
 
         self.mediaDir = os.path.join(mw.pm.profileFolder(), 'collection.media')
-        self.jsonPath = os.path.join(self.mediaDir, '_irx.json')
+        self.json_path = os.path.join(self.mediaDir, '_irx.json')
 
-        if os.path.isfile(self.jsonPath):
-            with open(self.jsonPath, encoding='utf-8') as jsonFile:
-                self.settings = json.load(jsonFile)
+        if os.path.isfile(self.json_path):
+            with open(self.json_path, encoding='utf-8') as json_file:
+                self.settings = json.load(json_file)
             self.addMissingSettings()
             self.removeOutdatedQuickKeys()
         else:
             self.settings = self.defaults
         
-        self.settings["my_custom_shortcuts"] = self.my_custom_shortcuts
+        self.settings["irx_controls"] = self.irx_controls
         self.settings["highlight_colors"] = self.highlight_colors
 
         self.loadMenuItems()
