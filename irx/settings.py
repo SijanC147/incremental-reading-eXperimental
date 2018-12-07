@@ -50,7 +50,7 @@ IRX_REVIEWER_ACTIONS = {
     "italic": lambda: mw.readingManager.textManager.format("italic"),
     "strikethrough": lambda: mw.readingManager.textManager.format("strike"),
     "remove": lambda: mw.readingManager.textManager.remove(),
-    "show reading list": lambda: mw.readingManager.scheduler.showDialog(),
+    "show reading list": lambda: mw.readingManager.scheduler.show_organizer(),
     "show image manager": lambda: mw.readingManager.textManager.manage_images(),
     "zoom in": lambda: mw.viewManager.zoomIn(),
     "zoom out": lambda: mw.viewManager.zoomOut(),
