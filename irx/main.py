@@ -9,7 +9,7 @@ from PyQt4.QtGui import QApplication
 from PyQt4.QtWebKit import QWebPage
 
 from anki import notes
-from anki.hooks import addHook, wrap
+from anki.hooks import addHook, wrap, remHook
 from anki.sound import clearAudioQueue
 from aqt import mw, dialogs
 from aqt.addcards import AddCards
@@ -63,6 +63,35 @@ class ReadingManager:
             self.controlsLoaded = True
 
         mw.viewManager.resetZoom("deckBrowser")
+        self.monkey_patch_other_addons()
+
+    def monkey_patch_other_addons(self):
+        Reviewer._answerButtonList = wrap(
+            Reviewer._answerButtonList, answerButtonList, "around"
+        )
+        try:
+            _dogs = mw.dogs
+        except AttributeError:
+            _dogs = None
+
+        try:
+            import Progress_Bar
+            _pb = Progress_Bar._updatePB
+        except ImportError:
+            _pb = None
+
+        original_undo = mw.readingManager.textManager.undo
+
+        def patched_undo():
+            if _pb:
+                remHook("showQuestion", _pb)
+            original_undo()
+            if _dogs:
+                mw.dogs["cnt"] -= 1
+            if _pb:
+                addHook("showQuestion", _pb)
+
+        mw.readingManager.textManager.undo = patched_undo
 
     def setupIrxModel(self):
         model = mw.col.models.new(self.settings["modelName"])
@@ -301,7 +330,7 @@ def keyHandler(self, evt, _old):
         }
         custom_hotkeys = {
             "enter": self._defaultEase,
-            "return": self._defaltEase,
+            "return": self._defaultEase,
             "space": self._defaultEase,
         }
         for key, val in mw.readingManager.settings["irx_controls"].items():
@@ -329,9 +358,6 @@ def defaultEase(self, _old):
     return _old(self)
 
 
-Reviewer._answerButtonList = wrap(
-    Reviewer._answerButtonList, answerButtonList, "around"
-)
 Reviewer._answerCard = wrap(Reviewer._answerCard, answerCard, "around")
 Reviewer._buttonTime = wrap(Reviewer._buttonTime, buttonTime, "around")
 Reviewer._linkHandler = wrap(Reviewer._linkHandler, LinkHandler, "around")
