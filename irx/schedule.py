@@ -24,19 +24,19 @@ SCHEDULE_DONE = 5
 class Scheduler:
     def __init__(self, settings):
         self.settings = settings
-        self.cardTreeWidget = QTreeView()
-        self.cardTreeWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.cardTreeWidget.setUniformRowHeights(True)
+        self.card_tree_widget = QTreeView()
+        self.card_tree_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.card_tree_widget.setUniformRowHeights(True)
+        self.card_tree_model = QStandardItemModel()
 
-    def populate_organizer(self, cardInfo):
-        self.cardTreeModel = QStandardItemModel()
-        self.cardTreeModel.setHorizontalHeaderLabels(
+    def populate_organizer(self, cards_info):
+        self.card_tree_model.setHorizontalHeaderLabels(
             [
                 'ID', 'Position', 'Type', 'Queue', 'Title', 'Due', 'Interval',
                 'Reps', 'Lapses'
             ]
         )
-        self.cardTreeWidget.setModel(self.cardTreeModel)
+        self.card_tree_widget.setModel(self.card_tree_model)
 
         queue_types = {
             "0": "New",
@@ -53,72 +53,72 @@ class Scheduler:
             "3": "Cramming",
         }
 
-        for i, card in enumerate(cardInfo, start=1):
-            cid = QStandardItem(str(card["id"]))
+        for i, card_info in enumerate(cards_info, start=1):
+            cid = QStandardItem(str(card_info["id"]))
             cid.setEditable(False)
             pos = QStandardItem("❰ {} ❱".format(i))
             pos.setEditable(False)
-            nid = QStandardItem(str(card["nid"]))
+            nid = QStandardItem(str(card_info["nid"]))
             nid.setEditable(False)
-            ctype = QStandardItem(card_types.get(str(card["type"])))
+            ctype = QStandardItem(card_types.get(str(card_info["type"])))
             ctype.setEditable(False)
-            queue = QStandardItem(queue_types.get(str(card["queue"])))
+            queue = QStandardItem(queue_types.get(str(card_info["queue"])))
             queue.setEditable(False)
-            due = QStandardItem(str(card["due"]))
+            due = QStandardItem(str(card_info["due"]))
             due.setEditable(False)
-            interval = QStandardItem(str(card["interval"]))
+            interval = QStandardItem(str(card_info["interval"]))
             interval.setEditable(False)
-            reps = QStandardItem(str(card["reps"]))
+            reps = QStandardItem(str(card_info["reps"]))
             reps.setEditable(False)
-            lapses = QStandardItem(str(card["lapses"]))
+            lapses = QStandardItem(str(card_info["lapses"]))
             lapses.setEditable(False)
-            title = QStandardItem(str(card["title"]))
+            title = QStandardItem(str(card_info["title"]))
             title.setEditable(False)
-            self.cardTreeModel.appendRow(
+            self.card_tree_model.appendRow(
                 [cid, pos, ctype, queue, title, due, interval, reps, lapses]
             )
 
     def update_organizer(self, mark_card=None):
-        if self.cardTreeWidget.isVisible():
+        if self.card_tree_widget.isVisible():
             did = mw._selectedDeck()['id']
-            card_info = self._getCardInfo(did, mark_card=mark_card)
-            if not card_info:
+            cards_info = self.deck_cards_info(did)
+            if not cards_info:
                 showInfo('Please select an Incremental Reading deck.')
                 return
+            else:
+                cards_info = self.mark_card_info(cards_info, mark="C")
+                if mark_card:
+                    cards_info = self.mark_card_info(
+                        cards_info, mark="*", card=mark_card
+                    )
 
-            self.populate_organizer(card_info)
-            self.cardTreeWidget.update()
+            self.populate_organizer(cards_info)
+            self.card_tree_widget.update()
 
-    def showDialog(self, currentCard=None):
-        if currentCard:
-            did = currentCard.did
+    def show_organizer(self, current_card=None):
+        if current_card:
+            did = current_card.did
         elif mw._selectedDeck():
             did = mw._selectedDeck()['id']
         else:
             return
 
-        cardInfo = self._getCardInfo(did)
-        if not cardInfo:
+        cards_info = self.deck_cards_info(did)
+        if not cards_info:
             showInfo('Please select an Incremental Reading deck.')
             return
 
         dialog = QDialog(mw)
         layout = QVBoxLayout()
-        upButton = QPushButton('Up')
-        upButton.clicked.connect(self._moveUp)
-        downButton = QPushButton('Down')
-        downButton.clicked.connect(self._moveDown)
-        randomizeButton = QPushButton('Randomize')
-        randomizeButton.clicked.connect(self._randomize)
+        refresh_button = QPushButton('Update')
+        refresh_button.clicked.connect(self.update_organizer)
 
-        controlsLayout = QHBoxLayout()
-        controlsLayout.addStretch()
-        controlsLayout.addWidget(upButton)
-        controlsLayout.addWidget(downButton)
-        controlsLayout.addWidget(randomizeButton)
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(refresh_button)
 
-        layout.addLayout(controlsLayout)
-        layout.addWidget(self.cardTreeWidget)
+        layout.addLayout(buttons_layout)
+        layout.addWidget(self.card_tree_widget)
 
         dialog.setLayout(layout)
         dialog.resize(1000, 500)
@@ -140,35 +140,35 @@ class Scheduler:
             ease_str = " L "
         elif ease == SCHEDULE_CUSTOM:
             self.reposition(card, 1)
-            self.showDialog(card)
+            self.show_organizer(card)
             return
         elif ease == SCHEDULE_DONE:
             self.done_with_note()
             return
 
         if method == 'percent':
-            totalCards = len([c['id'] for c in self._getCardInfo(card.did)])
-            newPos = totalCards * (value / 100)
+            total_cards = len([c['id'] for c in self.deck_cards_info(card.did)])
+            new_position = total_cards * (value / 100)
         elif method == 'count':
-            newPos = value
+            new_position = value
 
         if randomize:
-            newPos = gauss(newPos, newPos / 10)
+            new_position = gauss(new_position, new_position / 10)
 
-        cardNote = card.note()
+        card_note = card.note()
         setField(
-            cardNote, self.settings["titleField"],
-            getField(cardNote, self.settings["titleField"]) + ease_str
+            card_note, self.settings["titleField"],
+            getField(card_note, self.settings["titleField"]) + ease_str
         )
-        cardNote.flush()
+        card_note.flush()
 
-        newPos = max(1, int(newPos))
-        self.reposition(card, newPos, from_extract)
+        new_position = max(1, int(new_position))
+        self.reposition(card, new_position, from_extract)
         tooltip(
-            "Ok, we'll get back to that <b>{}</b> <br/><i>moved to position <b>{}</b></i>"
-            .format(tooltip_message, newPos)
+            "Ok, we'll get back to that <b>{}</b><br/><i>moved to position <b>{}</b></i>"
+            .format(tooltip_message, new_position)
         )
-        self.update_organizer(card)
+        self.update_organizer(mark_card=card)
 
     def done_with_note(self):
         current_card = mw.reviewer.card
@@ -184,8 +184,8 @@ class Scheduler:
 
     def reposition(self, card, newPos, from_extract=False):
         cids = [
-            c['id']
-            for c in self._getCardInfo(card.did, suspended=False, buried=False)
+            c['id'] for c in self.
+            deck_cards_info(card.did, suspended=False, buried=False)
         ]
         if from_extract:
             cids = list(set(cids) - set([mw.reviewer.card.id]))
@@ -200,46 +200,17 @@ class Scheduler:
         mw.col.sched.forgetCards(cids)
         mw.col.sched.sortCards(cids)
 
-    def _moveUp(self):
-        selected = [
-            self.cardListWidget.item(i)
-            for i in range(self.cardListWidget.count())
-            if self.cardListWidget.item(i).isSelected()
-        ]
-        for item in selected:
-            row = self.cardListWidget.row(item)
-            newRow = max(0, row - 1)
-            self.cardListWidget.insertItem(
-                newRow, self.cardListWidget.takeItem(row)
-            )
-            item.setSelected(True)
+    def mark_card_info(self, cards_info, mark=None, mark_fn=None, card=None):
+        mark = "[{}] ".format(mark or "*")
+        card = card or mw.reviewer.card
+        cond = mark_fn if mark_fn else (lambda c_info: c_info["id"] == card.id)
+        for (index, card_info) in enumerate(cards_info):
+            if cond(card_info):
+                cards_info[index]["title"] = mark + card_info["title"]
+        return cards_info
 
-    def _moveDown(self):
-        selected = [
-            self.cardListWidget.item(i)
-            for i in range(self.cardListWidget.count())
-            if self.cardListWidget.item(i).isSelected()
-        ]
-        selected.reverse()
-        for item in selected:
-            row = self.cardListWidget.row(item)
-            newRow = min(self.cardListWidget.count(), row + 1)
-            self.cardListWidget.insertItem(
-                newRow, self.cardListWidget.takeItem(row)
-            )
-            item.setSelected(True)
-
-    def _randomize(self):
-        allItems = [
-            self.cardListWidget.takeItem(0)
-            for i in range(self.cardListWidget.count())
-        ]
-        shuffle(allItems)
-        for item in allItems:
-            self.cardListWidget.addItem(item)
-
-    def _getCardInfo(self, did, mark_card=None, suspended=True, buried=True):
-        cardInfo = []
+    def deck_cards_info(self, did, suspended=True, buried=True):
+        cards_info = []
 
         query = 'select id, nid, type, queue, due, ivl, reps, lapses from cards where did = ?'
 
@@ -254,10 +225,7 @@ class Scheduler:
         ):
             note = mw.col.getNote(nid)
             if note.model()['name'] == self.settings['modelName']:
-                title = "[*]" if mark_card and cid == mark_card.id else ""
-                title += "[C]" if mw.reviewer.card and cid == mw.reviewer.card.id else ""
-                title += " "
-                cardInfo.append(
+                cards_info.append(
                     {
                         'id': cid,
                         'nid': nid,
@@ -267,7 +235,7 @@ class Scheduler:
                         'interval': ivl,
                         'reps': reps,
                         'lapses': lapses,
-                        'title': title + note[self.settings['titleField']]
+                        'title': note[self.settings['titleField']]
                     }
                 )
-        return cardInfo
+        return cards_info

@@ -54,7 +54,7 @@ class ReadingManager:
         if not self.controlsLoaded:
             addMenuItem("IR3X", "Settings", self.settingsManager.showDialog)
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
-            addMenuItem("IR3X::Dev", "Organizer", self.scheduler.showDialog)
+            addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             addMenuItem("IR3X::Dev", "Update Model", self.setupIrxModel)
             addMenuItem("IR3X", "About", showAbout)
             for keys, action in self.settings["irx_controls"].items():
