@@ -54,16 +54,13 @@ class ReadingManager:
 
         if not self.controlsLoaded:
             addMenuItem(
-                "Read", "Options...", self.settingsManager.showDialog, "Alt+1"
-            )
-            addMenuItem(
-                "Read", "Organizer...", self.scheduler.showDialog, "Alt+2"
+                "IRX", "Options...", self.settingsManager.showDialog, "Alt+1"
             )
             mw.viewManager.addMenuItems()
             mw.viewManager.addShortcuts()
-            addMenuItem("Read", "Update IRX Model", self.setupIrxModel)
-            addMenuItem("Read", "Help", self.settingsManager.show_help)
-            addMenuItem("Read", "About", showAbout)
+            addMenuItem("IRX", "Update Model", self.setupIrxModel)
+            addMenuItem("IRX", "Help", self.settingsManager.show_help)
+            addMenuItem("IRX", "About", showAbout)
             for keys, action in self.settings["my_custom_shortcuts"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
                     addShortcut(action, keys)

@@ -38,34 +38,8 @@ class TextManager:
             self.history = pickle.load(open(self.history_path, "rb"))
         else:
             self.history = defaultdict(list)
-        # Sean: Added this for autogenerating titles of children
-        self.children_extracts = 1
-
-    def highlight(self, bgColor=None, textColor=None, custom_key=None):
-        if custom_key:
-            bgColor = self.settings["highlight_colors"][custom_key][0]
-            textColor = self.settings["highlight_colors"][custom_key][1]
-        else:
-            if not bgColor:
-                bgColor = self.settings["highlightBgColor"]
-            if not textColor:
-                textColor = self.settings["highlightTextColor"]
-
-        identifier = str(int(time.time() * 10))
-        script = "markRange('%s', '%s', '%s');" % (
-            identifier,
-            bgColor,
-            textColor,
-        )
-        script += "highlight('%s', '%s');" % (bgColor, textColor)
-        mw.web.eval(script)
-        self.save()
 
     def format(self, style):
-        # current_view = mw.web.page().mainFrame().toHtml()
-        # soup = bs(current_view)
-        # text_div = soup.find("div", {"class": "irx-text"})
-        # db_log(text_div.contents)
         mw.web.eval('format("%s")' % style)
         self.save()
 
