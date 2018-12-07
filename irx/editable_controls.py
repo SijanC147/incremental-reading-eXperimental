@@ -1,4 +1,5 @@
 IRX_REVIEWER = {
+    "show help": "?",
     "toggle images": "Shift+m",
     "toggle formatting": "Shift+f",
     "toggle removed text": "Shift+z",
@@ -20,7 +21,12 @@ IRX_REVIEWER = {
     "remove": "z",
     "show reading list": "Ctrl+Alt+2",
     "show image manager": "i",
-    "show help": "?",
+    "zoom in": "Ctrl++",
+    "zoom out": "Ctrl+-",
+    "line up": "Up",
+    "line down": "Down",
+    "page up": "PgUp",
+    "page down": "PgDown"
 }
 
 IRX_IMAGE_MANAGER = {
