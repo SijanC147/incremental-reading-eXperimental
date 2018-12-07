@@ -3,96 +3,96 @@ var showFormatting = "yes";
 var showRemoved = "no";
 var showExtracts = "yes";
 
-function highlight(bgColor, textColor) {
-    if (window.getSelection) {
-        var range, sel = window.getSelection();
+// function highlight(bgColor, textColor) {
+//     if (window.getSelection) {
+//         var range, sel = window.getSelection();
 
-        if (sel.rangeCount && sel.getRangeAt) {
-            range = sel.getRangeAt(0);
-        }
+//         if (sel.rangeCount && sel.getRangeAt) {
+//             range = sel.getRangeAt(0);
+//         }
 
-        document.designMode = "on";
-        if (range) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
+//         document.designMode = "on";
+//         if (range) {
+//             sel.removeAllRanges();
+//             sel.addRange(range);
+//         }
 
-        document.execCommand("foreColor", false, textColor);
-        document.execCommand("hiliteColor", false, bgColor);
+//         document.execCommand("foreColor", false, textColor);
+//         document.execCommand("hiliteColor", false, bgColor);
 
-        document.designMode = "off";
-        sel.removeAllRanges();
-    }
-}
+//         document.designMode = "off";
+//         sel.removeAllRanges();
+//     }
+// }
 
-function markRange(identifier, bgColor, textColor) {
-    var range, sel = window.getSelection();
-    if (sel.rangeCount && sel.getRangeAt) {
-        range = sel.getRangeAt(0);
-        var startNode = document.createElement('span');
-        startNode.setAttribute('id', ('sx' + identifier));
-        startNode.setAttribute('irx-bg-color', bgColor);
-        startNode.setAttribute('irx-text-color', textColor);
-        range.insertNode(startNode);
-        var endNode = document.createElement('span');
-        endNode.setAttribute('id', ('ex' + identifier));
-        range.collapse(false);
-        range.insertNode(endNode);
-        range.setStartAfter(startNode);
-        range.setEndBefore(endNode);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-}
+// function markRange(identifier, bgColor, textColor) {
+//     var range, sel = window.getSelection();
+//     if (sel.rangeCount && sel.getRangeAt) {
+//         range = sel.getRangeAt(0);
+//         var startNode = document.createElement('span');
+//         startNode.setAttribute('id', ('sx' + identifier));
+//         startNode.setAttribute('irx-bg-color', bgColor);
+//         startNode.setAttribute('irx-text-color', textColor);
+//         range.insertNode(startNode);
+//         var endNode = document.createElement('span');
+//         endNode.setAttribute('id', ('ex' + identifier));
+//         range.collapse(false);
+//         range.insertNode(endNode);
+//         range.setStartAfter(startNode);
+//         range.setEndBefore(endNode);
+//         sel.removeAllRanges();
+//         sel.addRange(range);
+//     }
+// }
 
-function selectMarkedRange(identifier) {
-    var startNode, endNode, range, sel;
-    startNode = document.getElementById('sx' + identifier);
-    endNode = document.getElementById('ex' + identifier);
-    if (startNode && endNode) {
-        range = document.createRange();
-        range.setStartAfter(startNode);
-        range.setEndBefore(endNode);
-        sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-}
+// function selectMarkedRange(identifier) {
+//     var startNode, endNode, range, sel;
+//     startNode = document.getElementById('sx' + identifier);
+//     endNode = document.getElementById('ex' + identifier);
+//     if (startNode && endNode) {
+//         range = document.createRange();
+//         range.setStartAfter(startNode);
+//         range.setEndBefore(endNode);
+//         sel = window.getSelection();
+//         sel.removeAllRanges();
+//         sel.addRange(range);
+//     }
+// }
 
-function restoreHighlighting() {
-    var startNodesXPathResult = document.evaluate('//*[@ir-bg-color]', document, null, XPathResult.ANY_TYPE, null);
-    var sNodes = new Array();
-    var startNode = startNodesXPathResult.iterateNext();
-    while (startNode) {
-        sNodes.push(startNode);
-        startNode = startNodesXPathResult.iterateNext();
-    }
-    var id;
-    for (var i = 0; i < sNodes.length; i++) {
-        startNode = sNodes[i];
-        id = startNode.id.substring(1);
-        selectMarkedRange(id);
-        highlight(startNode.getAttribute('irx-bg-color'),
-            startNode.getAttribute('irx-text-color'))
-    }
-}
+// function restoreHighlighting() {
+//     var startNodesXPathResult = document.evaluate('//*[@ir-bg-color]', document, null, XPathResult.ANY_TYPE, null);
+//     var sNodes = new Array();
+//     var startNode = startNodesXPathResult.iterateNext();
+//     while (startNode) {
+//         sNodes.push(startNode);
+//         startNode = startNodesXPathResult.iterateNext();
+//     }
+//     var id;
+//     for (var i = 0; i < sNodes.length; i++) {
+//         startNode = sNodes[i];
+//         id = startNode.id.substring(1);
+//         selectMarkedRange(id);
+//         highlight(startNode.getAttribute('irx-bg-color'),
+//             startNode.getAttribute('irx-text-color'))
+//     }
+// }
 
-function turnoffHighlighting() {
-    var startNodesXPathResult = document.evaluate('//*[@irx-bg-color]', document, null, XPathResult.ANY_TYPE, null);
-    var sNodes = new Array();
-    var startNode = startNodesXPathResult.iterateNext();
-    while (startNode) {
-        sNodes.push(startNode);
-        startNode = startNodesXPathResult.iterateNext();
-    }
-    var id;
-    for (var i = 0; i < sNodes.length; i++) {
-        startNode = sNodes[i];
-        id = startNode.id.substring(1);
-        selectMarkedRange(id);
-        highlight('transparent', 'black')
-    }
-}
+// function turnoffHighlighting() {
+//     var startNodesXPathResult = document.evaluate('//*[@irx-bg-color]', document, null, XPathResult.ANY_TYPE, null);
+//     var sNodes = new Array();
+//     var startNode = startNodesXPathResult.iterateNext();
+//     while (startNode) {
+//         sNodes.push(startNode);
+//         startNode = startNodesXPathResult.iterateNext();
+//     }
+//     var id;
+//     for (var i = 0; i < sNodes.length; i++) {
+//         startNode = sNodes[i];
+//         id = startNode.id.substring(1);
+//         selectMarkedRange(id);
+//         highlight('transparent', 'black')
+//     }
+// }
 
 function removeText() {
     var selection = window.getSelection().getRangeAt(0);
