@@ -27,9 +27,9 @@ class Scheduler:
         self.card_tree_widget = QTreeView()
         self.card_tree_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.card_tree_widget.setUniformRowHeights(True)
-        self.card_tree_model = QStandardItemModel()
 
     def populate_organizer(self, cards_info):
+        self.card_tree_model = QStandardItemModel()
         self.card_tree_model.setHorizontalHeaderLabels(
             [
                 'ID', 'Position', 'Type', 'Queue', 'Title', 'Due', 'Interval',

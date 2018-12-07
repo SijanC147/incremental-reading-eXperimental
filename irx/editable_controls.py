@@ -9,7 +9,7 @@ IRX_REVIEWER = {
     "add image": "@",
     "add image (skip caption)": "Shift+@",
     "extract image": "m",
-    "extract image (skip caption)": "Ctrl+m",
+    "extract image (skip caption)": "Meta+m",
     "extract important": "1",
     "extract complimentary": "2",
     "extract important (and edit)": "Alt+1",

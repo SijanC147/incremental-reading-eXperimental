@@ -296,9 +296,14 @@ def keyHandler(self, evt, _old):
             "pgdown": Qt.Key_PageDown,
             "home": Qt.Key_Home,
             "end": Qt.Key_End,
-            "tab": Qt.Key_Tab
+            "tab": Qt.Key_Tab,
+            "space": Qt.Key_Space,
         }
-        custom_hotkeys = {}
+        custom_hotkeys = {
+            "enter": self._defaultEase,
+            "return": self._defaltEase,
+            "space": self._defaultEase,
+        }
         for key, val in mw.readingManager.settings["irx_controls"].items():
             if len(key) == 1:
                 custom_hotkeys[key.lower()] = val

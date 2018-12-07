@@ -130,7 +130,6 @@ class SettingsManager():
                 help_text += "<td style='padding: 5px'></td>"
             help_text += "</tr>"
         help_text += "</table>"
-        db_log(help_text)
         help_dialog = QDialog(mw)
         help_layout = QHBoxLayout()
         help_label = QLabel()
