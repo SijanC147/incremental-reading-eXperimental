@@ -3,7 +3,6 @@
 from __future__ import unicode_literals
 
 import re
-from os import environ
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication
@@ -45,8 +44,7 @@ class ReadingManager:
         self.settings = self.settingsManager.settings
         self.scheduler = Scheduler(self.settings)
         self.textManager = TextManager(self.settings)
-        mw.viewManager = ViewManager()
-        mw.viewManager.settings = self.settings
+        mw.viewManager = ViewManager(self.settings)
 
         if not mw.col.models.byName(self.settings["modelName"]):
             self.setupIrxModel()
@@ -54,19 +52,17 @@ class ReadingManager:
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem("IRX", "Settings", self.settingsManager.showDialog)
-            addMenuItem("IRX", "Help", self.settingsManager.show_help)
-            addMenuItem("IRX", "About", showAbout)
+            addMenuItem("IR3X", "Settings", self.settingsManager.showDialog)
+            addMenuItem("IR3X", "Help", self.settingsManager.show_help)
+            addMenuItem("IR3X::Dev", "Organizer", self.scheduler.showDialog)
+            addMenuItem("IR3X::Dev", "Update Model", self.setupIrxModel)
+            addMenuItem("IR3X", "About", showAbout)
             for keys, action in self.settings["irx_controls"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
                     addShortcut(action, keys)
             self.controlsLoaded = True
 
         mw.viewManager.resetZoom("deckBrowser")
-
-    def load_developer_tools(self):
-        if environ.get("IRX_DEV"):
-            addMenuItem("IRX", "Update Model", self.setupIrxModel)
 
     def setupIrxModel(self):
         model = mw.col.models.new(self.settings["modelName"])
@@ -305,16 +301,15 @@ def keyHandler(self, evt, _old):
         custom_hotkeys = {}
         for key, val in mw.readingManager.settings["irx_controls"].items():
             if len(key) == 1:
-                custom_hotkeys[key] = val
-            elif key in special_keys.keys():
-                custom_hotkeys[special_keys[key.lower()]] = val
-
-        key = unicode(evt.text())
+                custom_hotkeys[key.lower()] = val
+            elif key.lower() in special_keys.keys():
+                custom_hotkeys[str(special_keys[key.lower()])] = val
+        key = unicode(evt.text()).lower()
         if key in custom_hotkeys.keys():
             custom_hotkeys[key]()
             handled = True
-        elif evt.key() in custom_hotkeys.keys():
-            custom_hotkeys[evt.key()]()
+        elif str(evt.key()) in custom_hotkeys.keys():
+            custom_hotkeys[str(evt.key())]()
             handled = True
 
     return handled or _old(self, evt)

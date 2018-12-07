@@ -35,7 +35,7 @@ IRX_REVIEWER_ACTIONS = {
     "toggle formatting": lambda: mw.readingManager.textManager.toggle_show_formatting(),
     "toggle removed text": lambda: mw.readingManager.textManager.toggle_show_removed(),
     "toggle extracts": lambda: mw.readingManager.textManager.toggle_show_extracts(),
-    "done (suspend)": lambda: mw.readingManager.scheduler.doneWithNote(),
+    "done (suspend)": lambda: mw.readingManager.scheduler.done_with_note(),
     "undo": lambda: mw.readingManager.textManager.undo(),
     "add image": lambda: mw.readingManager.textManager.extract_image(),
     "add image (skip caption)": lambda: mw.readingManager.textManager.extract_image(skip_captions=True),
@@ -151,22 +151,17 @@ class SettingsManager():
 
     def loadSettings(self):
         self.defaults = {
-            'editExtract': False,
-            'editSource': False,
-            'extractDeck': None,
+            'zoomStep': 0.1,
             'generalZoom': 1,
             'lineScrollFactor': 0.05,
-            'modelName': 'IR3X',
             'pageScrollFactor': 0.5,
-            'plainText': False,
-            'quickKeys': {},
             'schedLaterMethod': 'percent',
             'schedLaterRandom': True,
             'schedLaterValue': 50,
             'schedSoonMethod': 'percent',
             'schedSoonRandom': True,
             'schedSoonValue': 10,
-            'scroll': {},
+            'modelName': 'IR3X',
             'sourceField': 'Source',
             'textField': 'Text',
             'titleField': 'Title',
@@ -175,8 +170,9 @@ class SettingsManager():
             'pidField': 'pid',
             'linkField': 'Link',
             'imagesField': 'Images',
+            'quickKeys': {},
+            'scroll': {},
             'zoom': {},
-            'zoomStep': 0.1
         }
 
         self.mediaDir = os.path.join(mw.pm.profileFolder(), 'collection.media')
@@ -234,28 +230,27 @@ class SettingsManager():
     def showDialog(self):
         dialog = QDialog(mw)
 
-        zoomScrollLayout = QHBoxLayout()
-        zoomScrollLayout.addWidget(self.createZoomGroupBox())
-        zoomScrollLayout.addWidget(self.createScrollGroupBox())
+        zoom_scroll_layout = QHBoxLayout()
+        zoom_scroll_layout.addWidget(self.createZoomGroupBox())
+        zoom_scroll_layout.addWidget(self.createScrollGroupBox())
+        zoom_scroll_widget = QWidget()
+        zoom_scroll_widget.setLayout(zoom_scroll_layout)
 
-        zoomScrollTab = QWidget()
-        zoomScrollTab.setLayout(zoomScrollLayout)
+        scheduling_layout = QVBoxLayout()
+        scheduling_layout.addWidget(self.create_scheduling_group_box())
+        scheduling_widget = QWidget()
+        scheduling_widget.setLayout(scheduling_layout)
 
-        tabWidget = QTabWidget()
-        tabWidget.setUsesScrollButtons(False)
-        tabWidget.addTab(self.createSchedulingTab(), 'Scheduling')
-        tabWidget.addTab(self.createQuickKeysTab(), 'Quick Keys')
-        tabWidget.addTab(zoomScrollTab, 'Zoom / Scroll')
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(dialog.accept)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
-        buttonBox.accepted.connect(dialog.accept)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(zoom_scroll_widget)
+        main_layout.addWidget(scheduling_widget)
+        main_layout.addWidget(button_box)
 
-        mainLayout = QVBoxLayout()
-        mainLayout.addWidget(tabWidget)
-        mainLayout.addWidget(buttonBox)
-
-        dialog.setLayout(mainLayout)
-        dialog.setWindowTitle('Incremental Reading Options')
+        dialog.setLayout(main_layout)
+        dialog.setWindowTitle('IR3X Settings')
         dialog.exec_()
 
         self.settings['zoomStep'] = self.zoomStepSpinBox.value() / 100.0
@@ -287,9 +282,9 @@ class SettingsManager():
 
         mw.viewManager.resetZoom(mw.state)
 
-    def createSchedulingTab(self):
-        soonLabel = QLabel('Soon Button')
-        laterLabel = QLabel('Later Button')
+    def create_scheduling_group_box(self):
+        soon_label = QLabel('Soon Button')
+        later_label = QLabel('Later Button')
 
         self.soonPercentButton = QRadioButton('Percent')
         soonPositionButton = QRadioButton('Position')
@@ -322,39 +317,125 @@ class SettingsManager():
         self.soonIntegerEditBox.setText(str(self.settings['schedSoonValue']))
         self.laterIntegerEditBox.setText(str(self.settings['schedLaterValue']))
 
-        soonLayout = QHBoxLayout()
-        soonLayout.addWidget(soonLabel)
-        soonLayout.addStretch()
-        soonLayout.addWidget(self.soonIntegerEditBox)
-        soonLayout.addWidget(self.soonPercentButton)
-        soonLayout.addWidget(soonPositionButton)
-        soonLayout.addWidget(self.soonRandomCheckBox)
+        soon_layout = QHBoxLayout()
+        soon_layout.addWidget(soon_label)
+        soon_layout.addStretch()
+        soon_layout.addWidget(self.soonIntegerEditBox)
+        soon_layout.addWidget(self.soonPercentButton)
+        soon_layout.addWidget(soonPositionButton)
+        soon_layout.addWidget(self.soonRandomCheckBox)
 
-        laterLayout = QHBoxLayout()
-        laterLayout.addWidget(laterLabel)
-        laterLayout.addStretch()
-        laterLayout.addWidget(self.laterIntegerEditBox)
-        laterLayout.addWidget(self.laterPercentButton)
-        laterLayout.addWidget(laterPositionButton)
-        laterLayout.addWidget(self.laterRandomCheckBox)
+        later_layout = QHBoxLayout()
+        later_layout.addWidget(later_label)
+        later_layout.addStretch()
+        later_layout.addWidget(self.laterIntegerEditBox)
+        later_layout.addWidget(self.laterPercentButton)
+        later_layout.addWidget(laterPositionButton)
+        later_layout.addWidget(self.laterRandomCheckBox)
 
-        soonButtonGroup = QButtonGroup(soonLayout)
-        soonButtonGroup.addButton(self.soonPercentButton)
-        soonButtonGroup.addButton(soonPositionButton)
+        soon_button_group = QButtonGroup(soon_layout)
+        soon_button_group.addButton(self.soonPercentButton)
+        soon_button_group.addButton(soonPositionButton)
 
-        laterButtonGroup = QButtonGroup(laterLayout)
-        laterButtonGroup.addButton(self.laterPercentButton)
-        laterButtonGroup.addButton(laterPositionButton)
+        later_button_group = QButtonGroup(later_layout)
+        later_button_group.addButton(self.laterPercentButton)
+        later_button_group.addButton(laterPositionButton)
 
         layout = QVBoxLayout()
-        layout.addLayout(soonLayout)
-        layout.addLayout(laterLayout)
+        layout.addLayout(soon_layout)
+        layout.addLayout(later_layout)
         layout.addStretch()
 
-        tab = QWidget()
-        tab.setLayout(layout)
+        group_box = QGroupBox('Scheduling')
+        group_box.setLayout(layout)
 
-        return tab
+        return group_box
+
+    def createZoomGroupBox(self):
+        zoomStepLabel = QLabel('Zoom Step')
+        zoomStepPercentLabel = QLabel('%')
+        generalZoomLabel = QLabel('General Zoom')
+        generalZoomPercentLabel = QLabel('%')
+
+        self.zoomStepSpinBox = QSpinBox()
+        self.zoomStepSpinBox.setMinimum(5)
+        self.zoomStepSpinBox.setMaximum(100)
+        self.zoomStepSpinBox.setSingleStep(5)
+        zoomStepPercent = round(self.settings['zoomStep'] * 100)
+        self.zoomStepSpinBox.setValue(zoomStepPercent)
+
+        self.generalZoomSpinBox = QSpinBox()
+        self.generalZoomSpinBox.setMinimum(10)
+        self.generalZoomSpinBox.setMaximum(200)
+        self.generalZoomSpinBox.setSingleStep(10)
+        generalZoomPercent = round(self.settings['generalZoom'] * 100)
+        self.generalZoomSpinBox.setValue(generalZoomPercent)
+
+        zoomStepLayout = QHBoxLayout()
+        zoomStepLayout.addWidget(zoomStepLabel)
+        zoomStepLayout.addStretch()
+        zoomStepLayout.addWidget(self.zoomStepSpinBox)
+        zoomStepLayout.addWidget(zoomStepPercentLabel)
+
+        generalZoomLayout = QHBoxLayout()
+        generalZoomLayout.addWidget(generalZoomLabel)
+        generalZoomLayout.addStretch()
+        generalZoomLayout.addWidget(self.generalZoomSpinBox)
+        generalZoomLayout.addWidget(generalZoomPercentLabel)
+
+        layout = QVBoxLayout()
+        layout.addLayout(zoomStepLayout)
+        layout.addLayout(generalZoomLayout)
+        layout.addStretch()
+
+        groupBox = QGroupBox('Zoom')
+        groupBox.setLayout(layout)
+
+        return groupBox
+
+    def createScrollGroupBox(self):
+        lineStepLabel = QLabel('Line Step')
+        lineStepPercentLabel = QLabel('%')
+        pageStepLabel = QLabel('Page Step')
+        pageStepPercentLabel = QLabel('%')
+
+        self.lineStepSpinBox = QSpinBox()
+        self.lineStepSpinBox.setMinimum(5)
+        self.lineStepSpinBox.setMaximum(100)
+        self.lineStepSpinBox.setSingleStep(5)
+        self.lineStepSpinBox.setValue(
+            round(self.settings['lineScrollFactor'] * 100)
+        )
+
+        self.pageStepSpinBox = QSpinBox()
+        self.pageStepSpinBox.setMinimum(5)
+        self.pageStepSpinBox.setMaximum(100)
+        self.pageStepSpinBox.setSingleStep(5)
+        self.pageStepSpinBox.setValue(
+            round(self.settings['pageScrollFactor'] * 100)
+        )
+
+        lineStepLayout = QHBoxLayout()
+        lineStepLayout.addWidget(lineStepLabel)
+        lineStepLayout.addStretch()
+        lineStepLayout.addWidget(self.lineStepSpinBox)
+        lineStepLayout.addWidget(lineStepPercentLabel)
+
+        pageStepLayout = QHBoxLayout()
+        pageStepLayout.addWidget(pageStepLabel)
+        pageStepLayout.addStretch()
+        pageStepLayout.addWidget(self.pageStepSpinBox)
+        pageStepLayout.addWidget(pageStepPercentLabel)
+
+        layout = QVBoxLayout()
+        layout.addLayout(lineStepLayout)
+        layout.addLayout(pageStepLayout)
+        layout.addStretch()
+
+        groupBox = QGroupBox('Scroll')
+        groupBox.setLayout(layout)
+
+        return groupBox
 
     def createQuickKeysTab(self):
         destDeckLabel = QLabel('Destination Deck')
@@ -405,8 +486,8 @@ class SettingsManager():
         keyComboLayout.addWidget(self.altKeyCheckBox)
         keyComboLayout.addWidget(self.regularKeyComboBox)
 
-        deckNames = ["[Mirror]"
-                    ] + sorted([d['name'] for d in mw.col.decks.all()])
+        deckNames = ["[Mirror]"]
+        deckNames += sorted([d['name'] for d in mw.col.decks.all()])
         self.destDeckComboBox.addItem('')
         self.destDeckComboBox.addItems(deckNames)
 
@@ -529,89 +610,3 @@ class SettingsManager():
         self.loadMenuItems()
 
         showInfo('New shortcut added: %s' % keyCombo)
-
-    def createZoomGroupBox(self):
-        zoomStepLabel = QLabel('Zoom Step')
-        zoomStepPercentLabel = QLabel('%')
-        generalZoomLabel = QLabel('General Zoom')
-        generalZoomPercentLabel = QLabel('%')
-
-        self.zoomStepSpinBox = QSpinBox()
-        self.zoomStepSpinBox.setMinimum(5)
-        self.zoomStepSpinBox.setMaximum(100)
-        self.zoomStepSpinBox.setSingleStep(5)
-        zoomStepPercent = round(self.settings['zoomStep'] * 100)
-        self.zoomStepSpinBox.setValue(zoomStepPercent)
-
-        self.generalZoomSpinBox = QSpinBox()
-        self.generalZoomSpinBox.setMinimum(10)
-        self.generalZoomSpinBox.setMaximum(200)
-        self.generalZoomSpinBox.setSingleStep(10)
-        generalZoomPercent = round(self.settings['generalZoom'] * 100)
-        self.generalZoomSpinBox.setValue(generalZoomPercent)
-
-        zoomStepLayout = QHBoxLayout()
-        zoomStepLayout.addWidget(zoomStepLabel)
-        zoomStepLayout.addStretch()
-        zoomStepLayout.addWidget(self.zoomStepSpinBox)
-        zoomStepLayout.addWidget(zoomStepPercentLabel)
-
-        generalZoomLayout = QHBoxLayout()
-        generalZoomLayout.addWidget(generalZoomLabel)
-        generalZoomLayout.addStretch()
-        generalZoomLayout.addWidget(self.generalZoomSpinBox)
-        generalZoomLayout.addWidget(generalZoomPercentLabel)
-
-        layout = QVBoxLayout()
-        layout.addLayout(zoomStepLayout)
-        layout.addLayout(generalZoomLayout)
-        layout.addStretch()
-
-        groupBox = QGroupBox('Zoom')
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def createScrollGroupBox(self):
-        lineStepLabel = QLabel('Line Step')
-        lineStepPercentLabel = QLabel('%')
-        pageStepLabel = QLabel('Page Step')
-        pageStepPercentLabel = QLabel('%')
-
-        self.lineStepSpinBox = QSpinBox()
-        self.lineStepSpinBox.setMinimum(5)
-        self.lineStepSpinBox.setMaximum(100)
-        self.lineStepSpinBox.setSingleStep(5)
-        self.lineStepSpinBox.setValue(
-            round(self.settings['lineScrollFactor'] * 100)
-        )
-
-        self.pageStepSpinBox = QSpinBox()
-        self.pageStepSpinBox.setMinimum(5)
-        self.pageStepSpinBox.setMaximum(100)
-        self.pageStepSpinBox.setSingleStep(5)
-        self.pageStepSpinBox.setValue(
-            round(self.settings['pageScrollFactor'] * 100)
-        )
-
-        lineStepLayout = QHBoxLayout()
-        lineStepLayout.addWidget(lineStepLabel)
-        lineStepLayout.addStretch()
-        lineStepLayout.addWidget(self.lineStepSpinBox)
-        lineStepLayout.addWidget(lineStepPercentLabel)
-
-        pageStepLayout = QHBoxLayout()
-        pageStepLayout.addWidget(pageStepLabel)
-        pageStepLayout.addStretch()
-        pageStepLayout.addWidget(self.pageStepSpinBox)
-        pageStepLayout.addWidget(pageStepPercentLabel)
-
-        layout = QVBoxLayout()
-        layout.addLayout(lineStepLayout)
-        layout.addLayout(pageStepLayout)
-        layout.addStretch()
-
-        groupBox = QGroupBox('Scroll')
-        groupBox.setLayout(layout)
-
-        return groupBox
