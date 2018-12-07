@@ -9,21 +9,9 @@ import os
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QButtonGroup,
-    QCheckBox,
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QGroupBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QRadioButton,
-    QSpinBox,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget
+    QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
+    QTabWidget, QVBoxLayout, QWidget
 )
 
 from anki.hooks import addHook
@@ -42,6 +30,7 @@ from irx.util import (
 from irx.editable_controls import IRX_REVIEWER, IRX_IMAGE_MANAGER
 
 IRX_REVIEWER_ACTIONS = {
+    "show help": lambda: mw.readingManager.settingsManager.show_help(),
     "toggle images": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
     "toggle formatting": lambda: mw.readingManager.textManager.toggle_show_formatting(),
     "toggle removed text": lambda: mw.readingManager.textManager.toggle_show_removed(),
@@ -63,13 +52,20 @@ IRX_REVIEWER_ACTIONS = {
     "remove": lambda: mw.readingManager.textManager.remove(),
     "show reading list": lambda: mw.readingManager.scheduler.showDialog(),
     "show image manager": lambda: mw.readingManager.textManager.manage_images(),
-    "show help": lambda: mw.readingManager.settingsManager.show_help(), 
+    "zoom in": lambda: mw.viewManager.zoomIn(),
+    "zoom out": lambda: mw.viewManager.zoomOut(),
+    "line up": lambda: mw.viewManager.lineUp(),
+    "line down": lambda: mw.viewManager.lineDown(),
+    "page up": lambda: mw.viewManager.pageUp(),
+    "page down": lambda: mw.viewManager.pageDown()
 }
+
 
 class SettingsManager():
     def __init__(self):
         self.irx_controls = {
-            IRX_REVIEWER[action]:IRX_REVIEWER_ACTIONS[action] for action in IRX_REVIEWER_ACTIONS.keys() 
+            IRX_REVIEWER[action]: IRX_REVIEWER_ACTIONS[action]
+            for action in IRX_REVIEWER_ACTIONS.keys()
         }
         self.highlight_colors = {
             "irx_schedule_soon": ("#FFE11A", "#000000"),
@@ -83,40 +79,56 @@ class SettingsManager():
         self.loadSettings()
 
         keys = IRX_REVIEWER.values()
-        duplicate_controls = list(set([key for key in keys if keys.count(key) > 1]))
+        duplicate_controls = list(
+            set([key for key in keys if keys.count(key) > 1])
+        )
         if duplicate_controls:
-            showInfo("The following IRX shortcut(s) are assigned conflicting actions:<br/><br/>{}<br/><br/>Review and change them in editable_controls.py".format(" ".join(list(set(duplicate_controls)))))
-
+            showInfo(
+                "The following IRX shortcut(s) are assigned conflicting actions:<br/><br/>{}<br/><br/>Review and change them in editable_controls.py"
+                .format(" ".join(list(set(duplicate_controls))))
+            )
 
         if self.settingsChanged:
-            showInfo("""
+            showInfo(
+                """
                     Your Incremental Reading settings file has been modified
                     for compatibility reasons. Please take a moment to
-                    reconfigure the add-on to your liking.""")
+                    reconfigure the add-on to your liking."""
+            )
 
         addHook('unloadProfile', self.saveSettings)
 
     def show_help(self):
         keys = IRX_REVIEWER.values()
-        duplicate_controls = list(set([key for key in keys if keys.count(key) > 1]))
+        duplicate_controls = list(
+            set([key for key in keys if keys.count(key) > 1])
+        )
         help_text = "<table>"
         actions = IRX_REVIEWER_ACTIONS.keys()
         for i in range(0, len(actions), 2):
             if IRX_REVIEWER[actions[i]] not in duplicate_controls:
                 hotkey_text = mac_fix(IRX_REVIEWER[actions[i]])
             else:
-                hotkey_text = "<font color='red'>"+mac_fix(IRX_REVIEWER[actions[i]])+"</font>"
+                hotkey_text = "<font color='red'>" + mac_fix(
+                    IRX_REVIEWER[actions[i]]
+                ) + "</font>"
             help_text += "<tr>"
-            help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(hotkey=hotkey_text,action=actions[i])
-            if i+1 < len(actions):
-                if IRX_REVIEWER[actions[i+1]] not in duplicate_controls:
-                    hotkey_text = mac_fix(IRX_REVIEWER[actions[i+1]])
+            help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(
+                hotkey=hotkey_text, action=actions[i]
+            )
+            if i + 1 < len(actions):
+                if IRX_REVIEWER[actions[i + 1]] not in duplicate_controls:
+                    hotkey_text = mac_fix(IRX_REVIEWER[actions[i + 1]])
                 else:
-                    hotkey_text = "<font color='red'>"+mac_fix(IRX_REVIEWER[actions[i+1]])+"</font>"
-                help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td>".format(hotkey=hotkey_text,action=actions[i+1])
+                    hotkey_text = "<font color='red'>" + mac_fix(
+                        IRX_REVIEWER[actions[i + 1]]
+                    ) + "</font>"
+                help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td>".format(
+                    hotkey=hotkey_text, action=actions[i + 1]
+                )
             else:
                 help_text += "<td style='padding: 5px'></td>"
-            help_text +="</tr>"
+            help_text += "</tr>"
         help_text += "</table>"
         db_log(help_text)
         help_dialog = QDialog(mw)
@@ -129,13 +141,11 @@ class SettingsManager():
         help_dialog.setWindowModality(Qt.WindowModal)
         help_dialog.exec_()
 
-
     def saveSettings(self):
         with open(self.json_path, 'w', encoding='utf-8') as json_file:
             self.settings["irx_controls"] = {}
             json.dump(self.settings, json_file)
-            self.settings["irx_controls"] = self.irx_controls 
-
+            self.settings["irx_controls"] = self.irx_controls
 
         updateModificationTime(self.mediaDir)
 
@@ -143,20 +153,13 @@ class SettingsManager():
         self.defaults = {
             'editExtract': False,
             'editSource': False,
-            'extractBgColor': 'Green',
             'extractDeck': None,
-            'extractKey': 'x',
-            'extractTextColor': 'Black',
             'generalZoom': 1,
-            'highlightBgColor': 'Yellow',
-            'highlightKey': 'h',
-            'highlightTextColor': 'Black',
             'lineScrollFactor': 0.05,
             'modelName': 'IR3X',
             'pageScrollFactor': 0.5,
             'plainText': False,
             'quickKeys': {},
-            'removeKey': 'z',
             'schedLaterMethod': 'percent',
             'schedLaterRandom': True,
             'schedLaterValue': 50,
@@ -172,7 +175,6 @@ class SettingsManager():
             'pidField': 'pid',
             'linkField': 'Link',
             'imagesField': 'Images',
-            'undoKey': 'u',
             'zoom': {},
             'zoomStep': 0.1
         }
@@ -187,7 +189,7 @@ class SettingsManager():
             self.removeOutdatedQuickKeys()
         else:
             self.settings = self.defaults
-        
+
         self.settings["irx_controls"] = self.irx_controls
         self.settings["highlight_colors"] = self.highlight_colors
 
@@ -200,17 +202,10 @@ class SettingsManager():
                 self.settingsChanged = True
 
     def removeOutdatedQuickKeys(self):
-        required = ['alt',
-                    'bgColor',
-                    'ctrl',
-                    'deckName',
-                    'editExtract',
-                    'editSource',
-                    'fieldName',
-                    'modelName',
-                    'regularKey',
-                    'shift',
-                    'textColor']
+        required = [
+            'alt', 'bgColor', 'ctrl', 'deckName', 'editExtract', 'editSource',
+            'fieldName', 'modelName', 'regularKey', 'shift', 'textColor'
+        ]
 
         for keyCombo, quickKey in self.settings['quickKeys'].copy().items():
             for k in required:
@@ -223,11 +218,13 @@ class SettingsManager():
         self.clearMenuItems()
 
         for keyCombo, quickKey in self.settings['quickKeys'].items():
-            menuText = 'Add Card [%s -> %s]' % (quickKey['modelName'],
-                                                quickKey['deckName'])
+            menuText = 'Add Card [%s -> %s]' % (
+                quickKey['modelName'], quickKey['deckName']
+            )
             function = partial(mw.readingManager.quickAdd, quickKey)
             mw.readingManager.quickKeyActions.append(
-                addMenuItem('Read::Quick Keys', menuText, function, keyCombo))
+                addMenuItem('Read::Quick Keys', menuText, function, keyCombo)
+            )
 
     def clearMenuItems(self):
         for action in mw.readingManager.quickKeyActions:
@@ -246,9 +243,6 @@ class SettingsManager():
 
         tabWidget = QTabWidget()
         tabWidget.setUsesScrollButtons(False)
-        # tabWidget.addTab(self.createGeneralTab(), 'General')
-        # tabWidget.addTab(self.createExtractionTab(), 'Extraction')
-        # tabWidget.addTab(self.createHighlightingTab(), 'Highlighting')
         tabWidget.addTab(self.createSchedulingTab(), 'Scheduling')
         tabWidget.addTab(self.createQuickKeysTab(), 'Quick Keys')
         tabWidget.addTab(zoomScrollTab, 'Zoom / Scroll')
@@ -268,22 +262,16 @@ class SettingsManager():
         self.settings['generalZoom'] = self.generalZoomSpinBox.value() / 100.0
         self.settings['lineScrollFactor'] = self.lineStepSpinBox.value() / 100.0
         self.settings['pageScrollFactor'] = self.pageStepSpinBox.value() / 100.0
-        # self.settings['editExtract'] = self.editExtractButton.isChecked()
-        # self.settings['editSource'] = self.editSourceCheckBox.isChecked()
-        # self.settings['plainText'] = self.plainTextCheckBox.isChecked()
         self.settings['schedSoonRandom'] = self.soonRandomCheckBox.isChecked()
         self.settings['schedLaterRandom'] = self.laterRandomCheckBox.isChecked()
 
-        # if self.extractDeckComboBox.currentText() == '[Current Deck]':
-        #     self.settings['extractDeck'] = None
-        # else:
-        #     self.settings['extractDeck'] = self.extractDeckComboBox.currentText()
-
         try:
             self.settings['schedSoonValue'] = int(
-                self.soonIntegerEditBox.text())
+                self.soonIntegerEditBox.text()
+            )
             self.settings['schedLaterValue'] = int(
-                self.laterIntegerEditBox.text())
+                self.laterIntegerEditBox.text()
+            )
         except:
             pass
 
@@ -298,264 +286,6 @@ class SettingsManager():
             self.settings['schedLaterMethod'] = 'count'
 
         mw.viewManager.resetZoom(mw.state)
-
-    # def createGeneralTab(self):
-    #     extractKeyLabel = QLabel('Extract Key')
-    #     highlightKeyLabel = QLabel('Highlight Key')
-    #     removeKeyLabel = QLabel('Remove Key')
-
-    #     self.extractKeyComboBox = QComboBox()
-    #     self.highlightKeyComboBox = QComboBox()
-    #     self.removeKeyComboBox = QComboBox()
-
-    #     keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
-    #     for comboBox in [self.extractKeyComboBox, self.highlightKeyComboBox, self.removeKeyComboBox]:
-    #         comboBox.addItems(keys)
-
-    #     self.setDefaultKeys()
-
-    #     extractKeyLayout = QHBoxLayout()
-    #     extractKeyLayout.addWidget(extractKeyLabel)
-    #     extractKeyLayout.addWidget(self.extractKeyComboBox)
-
-    #     highlightKeyLayout = QHBoxLayout()
-    #     highlightKeyLayout.addWidget(highlightKeyLabel)
-    #     highlightKeyLayout.addWidget(self.highlightKeyComboBox)
-
-    #     removeKeyLayout = QHBoxLayout()
-    #     removeKeyLayout.addWidget(removeKeyLabel)
-    #     removeKeyLayout.addWidget(self.removeKeyComboBox)
-
-    #     saveButton = QPushButton('Save')
-    #     saveButton.clicked.connect(self.saveKeys)
-
-    #     buttonLayout = QHBoxLayout()
-    #     buttonLayout.addStretch()
-    #     buttonLayout.addWidget(saveButton)
-
-    #     basicControlsLayout = QVBoxLayout()
-    #     basicControlsLayout.addLayout(extractKeyLayout)
-    #     basicControlsLayout.addLayout(highlightKeyLayout)
-    #     basicControlsLayout.addLayout(removeKeyLayout)
-    #     basicControlsLayout.addLayout(buttonLayout)
-    #     basicControlsLayout.addStretch()
-
-    #     groupBox = QGroupBox('Basic Controls')
-    #     groupBox.setLayout(basicControlsLayout)
-
-    #     layout = QHBoxLayout()
-    #     layout.addWidget(groupBox)
-
-    #     tab = QWidget()
-    #     tab.setLayout(layout)
-
-    #     return tab
-
-    # def setDefaultKeys(self):
-    #     setComboBoxItem(self.extractKeyComboBox, self.settings['extractKey'])
-    #     setComboBoxItem(self.highlightKeyComboBox,
-    #                     self.settings['highlightKey'])
-    #     setComboBoxItem(self.removeKeyComboBox, self.settings['removeKey'])
-
-    # def saveKeys(self):
-    #     keys = [self.extractKeyComboBox.currentText(),
-    #             self.highlightKeyComboBox.currentText(),
-    #             self.removeKeyComboBox.currentText()]
-
-    #     if len(set(keys)) < 3:
-    #         showInfo('There is a conflict with the keys you have chosen. Please try again.')
-    #         self.setDefaultKeys()
-    #     else:
-    #         self.settings['extractKey'] = (self.extractKeyComboBox.currentText().lower())
-    #         self.settings['highlightKey'] = (self.highlightKeyComboBox.currentText().lower())
-    #         self.settings['removeKey'] = (self.removeKeyComboBox.currentText().lower())
-
-    # def createExtractionTab(self):
-    #     extractDeckLabel = QLabel('Extracts Deck')
-    #     self.extractDeckComboBox = QComboBox()
-    #     deckNames = sorted([d['name'] for d in mw.col.decks.all()])
-    #     self.extractDeckComboBox.addItem('[Current Deck]')
-    #     self.extractDeckComboBox.addItems(deckNames)
-
-    #     if self.settings['extractDeck']:
-    #         setComboBoxItem(self.extractDeckComboBox, self.settings['extractDeck'])
-    #     else:
-    #         setComboBoxItem(self.extractDeckComboBox, '[Current Deck]')
-
-    #     extractDeckLayout = QHBoxLayout()
-    #     extractDeckLayout.addWidget(extractDeckLabel)
-    #     extractDeckLayout.addWidget(self.extractDeckComboBox)
-
-    #     self.editExtractButton = QRadioButton('Edit Extracted Note')
-    #     enterTitleButton = QRadioButton('Enter Title Only')
-
-    #     if self.settings['editExtract']:
-    #         self.editExtractButton.setChecked(True)
-    #     else:
-    #         enterTitleButton.setChecked(True)
-
-    #     radioButtonsLayout = QHBoxLayout()
-    #     radioButtonsLayout.addWidget(self.editExtractButton)
-    #     radioButtonsLayout.addWidget(enterTitleButton)
-    #     radioButtonsLayout.addStretch()
-
-    #     self.editSourceCheckBox = QCheckBox('Edit Source Note')
-    #     self.plainTextCheckBox = QCheckBox('Extract as Plain Text')
-
-    #     if self.settings['editSource']:
-    #         self.editSourceCheckBox.setChecked(True)
-
-    #     if self.settings['plainText']:
-    #         self.plainTextCheckBox.setChecked(True)
-
-    #     layout = QVBoxLayout()
-    #     layout.addLayout(extractDeckLayout)
-    #     layout.addLayout(radioButtonsLayout)
-    #     layout.addWidget(self.editSourceCheckBox)
-    #     layout.addWidget(self.plainTextCheckBox)
-    #     layout.addStretch()
-
-    #     tab = QWidget()
-    #     tab.setLayout(layout)
-
-    #     return tab
-
-    def createHighlightingTab(self):
-        colorsGroupBox = self.createColorsGroupBox()
-        colorPreviewGroupBox = self.createColorPreviewGroupBox()
-
-        horizontalLayout = QHBoxLayout()
-        horizontalLayout.addWidget(colorsGroupBox)
-        horizontalLayout.addWidget(colorPreviewGroupBox)
-
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Save)
-        buttonBox.accepted.connect(self.saveHighlightSettings)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.targetComboBox)
-        layout.addLayout(horizontalLayout)
-        layout.addWidget(buttonBox)
-        layout.addStretch()
-
-        tab = QWidget()
-        tab.setLayout(layout)
-
-        return tab
-
-    def saveHighlightSettings(self):
-        target = self.targetComboBox.currentText()
-        bgColor = self.bgColorComboBox.currentText()
-        textColor = self.textColorComboBox.currentText()
-
-        if target == self.settings['highlightKey']:
-            self.settings['highlightBgColor'] = bgColor
-            self.settings['highlightTextColor'] = textColor
-        elif target == self.settings['extractKey']:
-            self.settings['extractBgColor'] = bgColor
-            self.settings['extractTextColor'] = textColor
-        else:
-            self.settings['quickKeys'][target]['bgColor'] = bgColor
-            self.settings['quickKeys'][target]['textColor'] = textColor
-
-    def createColorsGroupBox(self):
-        self.targetComboBox = QComboBox()
-        self.targetComboBox.addItem(self.settings['highlightKey'])
-        self.targetComboBox.addItem(self.settings['extractKey'])
-        self.targetComboBox.addItems(self.settings['quickKeys'].keys())
-        self.targetComboBox.currentIndexChanged.connect(
-            self.updateHighlightingTab)
-
-        targetLayout = QHBoxLayout()
-        targetLayout.addWidget(self.targetComboBox)
-        targetLayout.addStretch()
-
-        colors = self.getColorList()
-
-        self.bgColorComboBox = QComboBox()
-        self.bgColorComboBox.addItems(colors)
-        setComboBoxItem(self.bgColorComboBox,
-                        self.settings['highlightBgColor'])
-        self.bgColorComboBox.currentIndexChanged.connect(
-            self.updateColorPreview)
-
-        self.textColorComboBox = QComboBox()
-        self.textColorComboBox.addItems(colors)
-        setComboBoxItem(self.textColorComboBox,
-                        self.settings['highlightTextColor'])
-        self.textColorComboBox.currentIndexChanged.connect(
-            self.updateColorPreview)
-
-        bgColorLabel = QLabel('Background')
-        bgColorLayout = QHBoxLayout()
-        bgColorLayout.addWidget(bgColorLabel)
-        bgColorLayout.addSpacing(10)
-        bgColorLayout.addWidget(self.bgColorComboBox)
-
-        textColorLabel = QLabel('Text')
-        textColorLayout = QHBoxLayout()
-        textColorLayout.addWidget(textColorLabel)
-        textColorLayout.addSpacing(10)
-        textColorLayout.addWidget(self.textColorComboBox)
-
-        layout = QVBoxLayout()
-        layout.addLayout(bgColorLayout)
-        layout.addLayout(textColorLayout)
-        layout.addStretch()
-
-        groupBox = QGroupBox('Colors')
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def updateHighlightingTab(self):
-        target = self.targetComboBox.currentText()
-        if target == self.settings['highlightKey']:
-            setComboBoxItem(self.bgColorComboBox,
-                            self.settings['highlightBgColor'])
-            setComboBoxItem(self.textColorComboBox,
-                            self.settings['highlightTextColor'])
-        elif target == self.settings['extractKey']:
-            setComboBoxItem(self.bgColorComboBox,
-                            self.settings['extractBgColor'])
-            setComboBoxItem(self.textColorComboBox,
-                            self.settings['extractTextColor'])
-        else:
-            setComboBoxItem(self.bgColorComboBox,
-                            self.settings['quickKeys'][target]['bgColor'])
-            setComboBoxItem(self.textColorComboBox,
-                            self.settings['quickKeys'][target]['textColor'])
-
-    def getColorList(self):
-        moduleDir, _ = os.path.split(__file__)
-        moduleDir = moduleDir.decode(getfilesystemencoding())
-        colorsFilePath = os.path.join(moduleDir, 'data', 'colors.u8')
-        with open(colorsFilePath, encoding='utf-8') as colorsFile:
-            return [line.strip() for line in colorsFile]
-
-    def updateColorPreview(self):
-        bgColor = self.bgColorComboBox.currentText()
-        textColor = self.textColorComboBox.currentText()
-        styleSheet = """
-                QLabel {
-                    background-color: %s;
-                    color: %s;
-                    padding: 10px;
-                    font-size: 16px;
-                    font-family: tahoma, geneva, sans-serif;
-                }""" % (bgColor, textColor)
-        self.colorPreviewLabel.setStyleSheet(styleSheet)
-        self.colorPreviewLabel.setAlignment(Qt.AlignCenter)
-
-    def createColorPreviewGroupBox(self):
-        self.colorPreviewLabel = QLabel('Example Text')
-        self.updateColorPreview()
-        colorPreviewLayout = QVBoxLayout()
-        colorPreviewLayout.addWidget(self.colorPreviewLabel)
-
-        groupBox = QGroupBox('Preview')
-        groupBox.setLayout(colorPreviewLayout)
-
-        return groupBox
 
     def createSchedulingTab(self):
         soonLabel = QLabel('Soon Button')
@@ -636,7 +366,8 @@ class SettingsManager():
         self.quickKeysComboBox.addItem('')
         self.quickKeysComboBox.addItems(self.settings['quickKeys'].keys())
         self.quickKeysComboBox.currentIndexChanged.connect(
-            self.updateQuickKeysTab)
+            self.updateQuickKeysTab
+        )
 
         self.destDeckComboBox = QComboBox()
         self.noteTypeComboBox = QComboBox()
@@ -651,7 +382,8 @@ class SettingsManager():
         self.regularKeyComboBox = QComboBox()
         self.regularKeyComboBox.addItem('')
         self.regularKeyComboBox.addItems(
-            list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'))
+            list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
+        )
 
         destDeckLayout = QHBoxLayout()
         destDeckLayout.addWidget(destDeckLabel)
@@ -673,7 +405,8 @@ class SettingsManager():
         keyComboLayout.addWidget(self.altKeyCheckBox)
         keyComboLayout.addWidget(self.regularKeyComboBox)
 
-        deckNames = ["[Mirror]"] + sorted([d['name'] for d in mw.col.decks.all()])
+        deckNames = ["[Mirror]"
+                    ] + sorted([d['name'] for d in mw.col.decks.all()])
         self.destDeckComboBox.addItem('')
         self.destDeckComboBox.addItems(deckNames)
 
@@ -758,25 +491,29 @@ class SettingsManager():
             self.loadMenuItems()
 
     def setQuickKey(self):
-        quickKey = {'deckName': self.destDeckComboBox.currentText(),
-                    'modelName': self.noteTypeComboBox.currentText(),
-                    'fieldName': self.textFieldComboBox.currentText(),
-                    'ctrl': self.ctrlKeyCheckBox.isChecked(),
-                    'shift': self.shiftKeyCheckBox.isChecked(),
-                    'alt': self.altKeyCheckBox.isChecked(),
-                    'regularKey': self.regularKeyComboBox.currentText(),
-                    'bgColor': self.bgColorComboBox.currentText(),
-                    'textColor': self.textColorComboBox.currentText(),
-                    'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
-                    'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
-                    'plainText': self.quickKeyPlainTextCheckBox.isChecked()}
+        quickKey = {
+            'deckName': self.destDeckComboBox.currentText(),
+            'modelName': self.noteTypeComboBox.currentText(),
+            'fieldName': self.textFieldComboBox.currentText(),
+            'ctrl': self.ctrlKeyCheckBox.isChecked(),
+            'shift': self.shiftKeyCheckBox.isChecked(),
+            'alt': self.altKeyCheckBox.isChecked(),
+            'regularKey': self.regularKeyComboBox.currentText(),
+            'bgColor': self.bgColorComboBox.currentText(),
+            'textColor': self.textColorComboBox.currentText(),
+            'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
+            'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
+            'plainText': self.quickKeyPlainTextCheckBox.isChecked()
+        }
 
         for k in ['deckName', 'modelName', 'regularKey']:
             if not quickKey[k]:
-                showInfo("""
+                showInfo(
+                    """
                         Please complete all settings. Destination deck,
                         note type, and a letter or number for the key 
-                        combination are required.""")
+                        combination are required."""
+                )
                 return
 
         keyCombo = ''
@@ -845,13 +582,17 @@ class SettingsManager():
         self.lineStepSpinBox.setMinimum(5)
         self.lineStepSpinBox.setMaximum(100)
         self.lineStepSpinBox.setSingleStep(5)
-        self.lineStepSpinBox.setValue(round(self.settings['lineScrollFactor'] * 100))
+        self.lineStepSpinBox.setValue(
+            round(self.settings['lineScrollFactor'] * 100)
+        )
 
         self.pageStepSpinBox = QSpinBox()
         self.pageStepSpinBox.setMinimum(5)
         self.pageStepSpinBox.setMaximum(100)
         self.pageStepSpinBox.setSingleStep(5)
-        self.pageStepSpinBox.setValue(round(self.settings['pageScrollFactor'] * 100))
+        self.pageStepSpinBox.setValue(
+            round(self.settings['pageScrollFactor'] * 100)
+        )
 
         lineStepLayout = QHBoxLayout()
         lineStepLayout.addWidget(lineStepLabel)

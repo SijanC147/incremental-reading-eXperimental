@@ -16,27 +16,17 @@ class ViewManager():
         self.zoomFactor = 1
         mw.moveToState = wrap(mw.moveToState, self.resetZoom, 'before')
         mw.web.wheelEvent = wrap(mw.web.wheelEvent, self.saveScroll)
-        mw.web.mouseReleaseEvent = wrap(mw.web.mouseReleaseEvent,
-                                        self.saveScroll,
-                                        'before')
-
-    def addMenuItems(self):
-        addMenuItem('Read', 'Zoom In', self.zoomIn, 'Ctrl++')
-        addMenuItem('Read', 'Zoom Out', self.zoomOut, 'Ctrl+-')
-
-    def addShortcuts(self):
-        addShortcut(self.lineUp, 'Up')
-        addShortcut(self.lineDown, 'Down')
-        addShortcut(self.pageUp, 'PgUp')
-        addShortcut(self.pageDown, 'PgDown')
-        addShortcut(self.zoomIn, 'Ctrl+=')
+        mw.web.mouseReleaseEvent = wrap(
+            mw.web.mouseReleaseEvent, self.saveScroll, 'before'
+        )
 
     def setZoom(self, factor=None):
         if factor:
             mw.web.setZoomFactor(factor)
         else:
             mw.web.setZoomFactor(
-                self.settings['zoom'][str(mw.reviewer.card.id)])
+                self.settings['zoom'][str(mw.reviewer.card.id)]
+            )
 
     def zoomIn(self):
         if viewingIrxText():

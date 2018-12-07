@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import re
+from os import environ
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication
@@ -53,27 +54,25 @@ class ReadingManager:
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem(
-                "IRX", "Options...", self.settingsManager.showDialog, "Alt+1"
-            )
-            mw.viewManager.addMenuItems()
-            mw.viewManager.addShortcuts()
-            addMenuItem("IRX", "Update Model", self.setupIrxModel)
+            addMenuItem("IRX", "Settings", self.settingsManager.showDialog)
             addMenuItem("IRX", "Help", self.settingsManager.show_help)
             addMenuItem("IRX", "About", showAbout)
-            for keys, action in self.settings["my_custom_shortcuts"].items():
+            for keys, action in self.settings["irx_controls"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
                     addShortcut(action, keys)
             self.controlsLoaded = True
 
         mw.viewManager.resetZoom("deckBrowser")
 
+    def load_developer_tools(self):
+        if environ.get("IRX_DEV"):
+            addMenuItem("IRX", "Update Model", self.setupIrxModel)
+
     def setupIrxModel(self):
         model = mw.col.models.new(self.settings["modelName"])
-        fields = []
-        for k, v in self.settings.items():
-            if k[-5:] == "Field":
-                mw.col.models.addField(model, mw.col.models.newField(v))
+        for key, value in self.settings.items():
+            if key[-5:] == "Field":
+                mw.col.models.addField(model, mw.col.models.newField(value))
         model["css"] = loadFile('web', 'model.css')
         template = self.makeTemplate(
             name="IRX Card",
@@ -287,17 +286,36 @@ def LinkHandler(self, evt, _old):
 
 
 def keyHandler(self, evt, _old):
-    key = unicode(evt.text())
-    custom_hotkeys = {
-        key: val
-        for key, val in mw.readingManager.settings["irx_controls"].items()
-        if len(key) == 1
-    }
     handled = False
+    if viewingIrxText():
+        special_keys = {
+            "up": Qt.Key_Up,
+            "down": Qt.Key_Down,
+            "left": Qt.Key_Left,
+            "right": Qt.Key_Right,
+            "enter": Qt.Key_Enter,
+            "return": Qt.Key_Return,
+            "esc": Qt.Key_Escape,
+            "pgup": Qt.Key_PageUp,
+            "pgdown": Qt.Key_PageDown,
+            "home": Qt.Key_Home,
+            "end": Qt.Key_End,
+            "tab": Qt.Key_Tab
+        }
+        custom_hotkeys = {}
+        for key, val in mw.readingManager.settings["irx_controls"].items():
+            if len(key) == 1:
+                custom_hotkeys[key] = val
+            elif key in special_keys.keys():
+                custom_hotkeys[special_keys[key.lower()]] = val
 
-    if viewingIrxText() and key in custom_hotkeys.keys():
-        custom_hotkeys[key]()
-        handled = True
+        key = unicode(evt.text())
+        if key in custom_hotkeys.keys():
+            custom_hotkeys[key]()
+            handled = True
+        elif evt.key() in custom_hotkeys.keys():
+            custom_hotkeys[evt.key()]()
+            handled = True
 
     return handled or _old(self, evt)
 
