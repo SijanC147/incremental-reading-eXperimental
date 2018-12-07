@@ -274,10 +274,10 @@ class SettingsManager():
         self.settings['schedSoonRandom'] = self.soonRandomCheckBox.isChecked()
         self.settings['schedLaterRandom'] = self.laterRandomCheckBox.isChecked()
 
-        if self.extractDeckComboBox.currentText() == '[Current Deck]':
-            self.settings['extractDeck'] = None
-        else:
-            self.settings['extractDeck'] = self.extractDeckComboBox.currentText()
+        # if self.extractDeckComboBox.currentText() == '[Current Deck]':
+        #     self.settings['extractDeck'] = None
+        # else:
+        #     self.settings['extractDeck'] = self.extractDeckComboBox.currentText()
 
         try:
             self.settings['schedSoonValue'] = int(
@@ -299,126 +299,126 @@ class SettingsManager():
 
         mw.viewManager.resetZoom(mw.state)
 
-    def createGeneralTab(self):
-        extractKeyLabel = QLabel('Extract Key')
-        highlightKeyLabel = QLabel('Highlight Key')
-        removeKeyLabel = QLabel('Remove Key')
+    # def createGeneralTab(self):
+    #     extractKeyLabel = QLabel('Extract Key')
+    #     highlightKeyLabel = QLabel('Highlight Key')
+    #     removeKeyLabel = QLabel('Remove Key')
 
-        self.extractKeyComboBox = QComboBox()
-        self.highlightKeyComboBox = QComboBox()
-        self.removeKeyComboBox = QComboBox()
+    #     self.extractKeyComboBox = QComboBox()
+    #     self.highlightKeyComboBox = QComboBox()
+    #     self.removeKeyComboBox = QComboBox()
 
-        keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
-        for comboBox in [self.extractKeyComboBox, self.highlightKeyComboBox, self.removeKeyComboBox]:
-            comboBox.addItems(keys)
+    #     keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
+    #     for comboBox in [self.extractKeyComboBox, self.highlightKeyComboBox, self.removeKeyComboBox]:
+    #         comboBox.addItems(keys)
 
-        self.setDefaultKeys()
+    #     self.setDefaultKeys()
 
-        extractKeyLayout = QHBoxLayout()
-        extractKeyLayout.addWidget(extractKeyLabel)
-        extractKeyLayout.addWidget(self.extractKeyComboBox)
+    #     extractKeyLayout = QHBoxLayout()
+    #     extractKeyLayout.addWidget(extractKeyLabel)
+    #     extractKeyLayout.addWidget(self.extractKeyComboBox)
 
-        highlightKeyLayout = QHBoxLayout()
-        highlightKeyLayout.addWidget(highlightKeyLabel)
-        highlightKeyLayout.addWidget(self.highlightKeyComboBox)
+    #     highlightKeyLayout = QHBoxLayout()
+    #     highlightKeyLayout.addWidget(highlightKeyLabel)
+    #     highlightKeyLayout.addWidget(self.highlightKeyComboBox)
 
-        removeKeyLayout = QHBoxLayout()
-        removeKeyLayout.addWidget(removeKeyLabel)
-        removeKeyLayout.addWidget(self.removeKeyComboBox)
+    #     removeKeyLayout = QHBoxLayout()
+    #     removeKeyLayout.addWidget(removeKeyLabel)
+    #     removeKeyLayout.addWidget(self.removeKeyComboBox)
 
-        saveButton = QPushButton('Save')
-        saveButton.clicked.connect(self.saveKeys)
+    #     saveButton = QPushButton('Save')
+    #     saveButton.clicked.connect(self.saveKeys)
 
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addStretch()
-        buttonLayout.addWidget(saveButton)
+    #     buttonLayout = QHBoxLayout()
+    #     buttonLayout.addStretch()
+    #     buttonLayout.addWidget(saveButton)
 
-        basicControlsLayout = QVBoxLayout()
-        basicControlsLayout.addLayout(extractKeyLayout)
-        basicControlsLayout.addLayout(highlightKeyLayout)
-        basicControlsLayout.addLayout(removeKeyLayout)
-        basicControlsLayout.addLayout(buttonLayout)
-        basicControlsLayout.addStretch()
+    #     basicControlsLayout = QVBoxLayout()
+    #     basicControlsLayout.addLayout(extractKeyLayout)
+    #     basicControlsLayout.addLayout(highlightKeyLayout)
+    #     basicControlsLayout.addLayout(removeKeyLayout)
+    #     basicControlsLayout.addLayout(buttonLayout)
+    #     basicControlsLayout.addStretch()
 
-        groupBox = QGroupBox('Basic Controls')
-        groupBox.setLayout(basicControlsLayout)
+    #     groupBox = QGroupBox('Basic Controls')
+    #     groupBox.setLayout(basicControlsLayout)
 
-        layout = QHBoxLayout()
-        layout.addWidget(groupBox)
+    #     layout = QHBoxLayout()
+    #     layout.addWidget(groupBox)
 
-        tab = QWidget()
-        tab.setLayout(layout)
+    #     tab = QWidget()
+    #     tab.setLayout(layout)
 
-        return tab
+    #     return tab
 
-    def setDefaultKeys(self):
-        setComboBoxItem(self.extractKeyComboBox, self.settings['extractKey'])
-        setComboBoxItem(self.highlightKeyComboBox,
-                        self.settings['highlightKey'])
-        setComboBoxItem(self.removeKeyComboBox, self.settings['removeKey'])
+    # def setDefaultKeys(self):
+    #     setComboBoxItem(self.extractKeyComboBox, self.settings['extractKey'])
+    #     setComboBoxItem(self.highlightKeyComboBox,
+    #                     self.settings['highlightKey'])
+    #     setComboBoxItem(self.removeKeyComboBox, self.settings['removeKey'])
 
-    def saveKeys(self):
-        keys = [self.extractKeyComboBox.currentText(),
-                self.highlightKeyComboBox.currentText(),
-                self.removeKeyComboBox.currentText()]
+    # def saveKeys(self):
+    #     keys = [self.extractKeyComboBox.currentText(),
+    #             self.highlightKeyComboBox.currentText(),
+    #             self.removeKeyComboBox.currentText()]
 
-        if len(set(keys)) < 3:
-            showInfo('There is a conflict with the keys you have chosen. Please try again.')
-            self.setDefaultKeys()
-        else:
-            self.settings['extractKey'] = (self.extractKeyComboBox.currentText().lower())
-            self.settings['highlightKey'] = (self.highlightKeyComboBox.currentText().lower())
-            self.settings['removeKey'] = (self.removeKeyComboBox.currentText().lower())
+    #     if len(set(keys)) < 3:
+    #         showInfo('There is a conflict with the keys you have chosen. Please try again.')
+    #         self.setDefaultKeys()
+    #     else:
+    #         self.settings['extractKey'] = (self.extractKeyComboBox.currentText().lower())
+    #         self.settings['highlightKey'] = (self.highlightKeyComboBox.currentText().lower())
+    #         self.settings['removeKey'] = (self.removeKeyComboBox.currentText().lower())
 
-    def createExtractionTab(self):
-        extractDeckLabel = QLabel('Extracts Deck')
-        self.extractDeckComboBox = QComboBox()
-        deckNames = sorted([d['name'] for d in mw.col.decks.all()])
-        self.extractDeckComboBox.addItem('[Current Deck]')
-        self.extractDeckComboBox.addItems(deckNames)
+    # def createExtractionTab(self):
+    #     extractDeckLabel = QLabel('Extracts Deck')
+    #     self.extractDeckComboBox = QComboBox()
+    #     deckNames = sorted([d['name'] for d in mw.col.decks.all()])
+    #     self.extractDeckComboBox.addItem('[Current Deck]')
+    #     self.extractDeckComboBox.addItems(deckNames)
 
-        if self.settings['extractDeck']:
-            setComboBoxItem(self.extractDeckComboBox, self.settings['extractDeck'])
-        else:
-            setComboBoxItem(self.extractDeckComboBox, '[Current Deck]')
+    #     if self.settings['extractDeck']:
+    #         setComboBoxItem(self.extractDeckComboBox, self.settings['extractDeck'])
+    #     else:
+    #         setComboBoxItem(self.extractDeckComboBox, '[Current Deck]')
 
-        extractDeckLayout = QHBoxLayout()
-        extractDeckLayout.addWidget(extractDeckLabel)
-        extractDeckLayout.addWidget(self.extractDeckComboBox)
+    #     extractDeckLayout = QHBoxLayout()
+    #     extractDeckLayout.addWidget(extractDeckLabel)
+    #     extractDeckLayout.addWidget(self.extractDeckComboBox)
 
-        self.editExtractButton = QRadioButton('Edit Extracted Note')
-        enterTitleButton = QRadioButton('Enter Title Only')
+    #     self.editExtractButton = QRadioButton('Edit Extracted Note')
+    #     enterTitleButton = QRadioButton('Enter Title Only')
 
-        if self.settings['editExtract']:
-            self.editExtractButton.setChecked(True)
-        else:
-            enterTitleButton.setChecked(True)
+    #     if self.settings['editExtract']:
+    #         self.editExtractButton.setChecked(True)
+    #     else:
+    #         enterTitleButton.setChecked(True)
 
-        radioButtonsLayout = QHBoxLayout()
-        radioButtonsLayout.addWidget(self.editExtractButton)
-        radioButtonsLayout.addWidget(enterTitleButton)
-        radioButtonsLayout.addStretch()
+    #     radioButtonsLayout = QHBoxLayout()
+    #     radioButtonsLayout.addWidget(self.editExtractButton)
+    #     radioButtonsLayout.addWidget(enterTitleButton)
+    #     radioButtonsLayout.addStretch()
 
-        self.editSourceCheckBox = QCheckBox('Edit Source Note')
-        self.plainTextCheckBox = QCheckBox('Extract as Plain Text')
+    #     self.editSourceCheckBox = QCheckBox('Edit Source Note')
+    #     self.plainTextCheckBox = QCheckBox('Extract as Plain Text')
 
-        if self.settings['editSource']:
-            self.editSourceCheckBox.setChecked(True)
+    #     if self.settings['editSource']:
+    #         self.editSourceCheckBox.setChecked(True)
 
-        if self.settings['plainText']:
-            self.plainTextCheckBox.setChecked(True)
+    #     if self.settings['plainText']:
+    #         self.plainTextCheckBox.setChecked(True)
 
-        layout = QVBoxLayout()
-        layout.addLayout(extractDeckLayout)
-        layout.addLayout(radioButtonsLayout)
-        layout.addWidget(self.editSourceCheckBox)
-        layout.addWidget(self.plainTextCheckBox)
-        layout.addStretch()
+    #     layout = QVBoxLayout()
+    #     layout.addLayout(extractDeckLayout)
+    #     layout.addLayout(radioButtonsLayout)
+    #     layout.addWidget(self.editSourceCheckBox)
+    #     layout.addWidget(self.plainTextCheckBox)
+    #     layout.addStretch()
 
-        tab = QWidget()
-        tab.setLayout(layout)
+    #     tab = QWidget()
+    #     tab.setLayout(layout)
 
-        return tab
+    #     return tab
 
     def createHighlightingTab(self):
         colorsGroupBox = self.createColorsGroupBox()
