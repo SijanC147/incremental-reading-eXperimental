@@ -11,9 +11,10 @@ from irx.util import addMenuItem, addShortcut, isIrxCard, viewingIrxText
 
 
 class ViewManager():
-    def __init__(self):
+    def __init__(self, settings):
         self.previousState = None
         self.zoomFactor = 1
+        self.settings = settings
         mw.moveToState = wrap(mw.moveToState, self.resetZoom, 'before')
         mw.web.wheelEvent = wrap(mw.web.wheelEvent, self.saveScroll)
         mw.web.mouseReleaseEvent = wrap(

@@ -445,7 +445,6 @@ class TextManager:
         current_view = mw.web.page().mainFrame().toHtml()
         soup = bs(current_view)
         text_div = soup.find("div", {"class": "irx-text"})
-        # db_log(text_div.contents)
         images_div = soup.find("div", {"class": "irx-images"})
         if text_div:
             current_note = mw.reviewer.card.note()

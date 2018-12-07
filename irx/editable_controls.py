@@ -21,7 +21,7 @@ IRX_REVIEWER = {
     "remove": "z",
     "show reading list": "Ctrl+Alt+2",
     "show image manager": "i",
-    "zoom in": "Ctrl++",
+    "zoom in": "Ctrl+=",
     "zoom out": "Ctrl+-",
     "line up": "Up",
     "line down": "Down",

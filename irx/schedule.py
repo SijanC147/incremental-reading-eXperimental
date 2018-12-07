@@ -52,7 +52,6 @@ class Scheduler:
             "2": "Re-Learning",
             "3": "Cramming",
         }
-        posWidth = len(str(len(cardInfo) + 1))
 
         for i, card in enumerate(cardInfo, start=1):
             cid = QStandardItem(str(card["id"]))
@@ -82,12 +81,12 @@ class Scheduler:
     def update_organizer(self, mark_card=None):
         if self.cardTreeWidget.isVisible():
             did = mw._selectedDeck()['id']
-            cardInfo = self._getCardInfo(did, mark_card=mark_card)
-            if not cardInfo:
+            card_info = self._getCardInfo(did, mark_card=mark_card)
+            if not card_info:
                 showInfo('Please select an Incremental Reading deck.')
                 return
 
-            self.populate_organizer(cardInfo)
+            self.populate_organizer(card_info)
             self.cardTreeWidget.update()
 
     def showDialog(self, currentCard=None):
@@ -118,29 +117,13 @@ class Scheduler:
         controlsLayout.addWidget(downButton)
         controlsLayout.addWidget(randomizeButton)
 
-        # buttonBox = QDialogButtonBox(QDialogButtonBox.Close | QDialogButtonBox.Save)
-        # buttonBox.accepted.connect(dialog.accept)
-        # buttonBox.rejected.connect(dialog.reject)
-        # buttonBox.setOrientation(Qt.Horizontal)
-
         layout.addLayout(controlsLayout)
         layout.addWidget(self.cardTreeWidget)
-        # layout.addWidget(buttonBox)
 
         dialog.setLayout(layout)
-        # dialog.setWindowModality(Qt.WindowModal)
         dialog.resize(1000, 500)
         dialog.show()
         self.update_organizer()
-        # choice = dialog.exec_()
-
-        # if choice == 1:
-        #     cids = []
-        #     for i in range(self.cardListWidget.count()):
-        #         card = self.cardListWidget.item(i).data(Qt.UserRole)
-        #         cids.append(card['id'])
-
-        #     self.reorder(cids)
 
     def answer(self, card, ease, from_extract=False):
         if ease == SCHEDULE_SOON:
@@ -160,7 +143,7 @@ class Scheduler:
             self.showDialog(card)
             return
         elif ease == SCHEDULE_DONE:
-            self.doneWithNote()
+            self.done_with_note()
             return
 
         if method == 'percent':
@@ -187,7 +170,7 @@ class Scheduler:
         )
         self.update_organizer(card)
 
-    def doneWithNote(self):
+    def done_with_note(self):
         current_card = mw.reviewer.card
         current_note = current_card.note()
         title = getField(current_note, "Title")
@@ -208,10 +191,10 @@ class Scheduler:
             cids = list(set(cids) - set([mw.reviewer.card.id]))
         mw.col.sched.forgetCards(cids)
         cids.remove(card.id)
-        newOrder = cids[:newPos - 1] + [card.id] + cids[newPos - 1:]
+        new_order = cids[:newPos - 1] + [card.id] + cids[newPos - 1:]
         if from_extract:
-            newOrder = [mw.reviewer.card.id] + newOrder
-        mw.col.sched.sortCards(newOrder)
+            new_order = [mw.reviewer.card.id] + new_order
+        mw.col.sched.sortCards(new_order)
 
     def reorder(self, cids):
         mw.col.sched.forgetCards(cids)
