@@ -507,7 +507,7 @@ class TextManager:
         current_note["Text"] = save_data["text"]
         current_note["Images"] = save_data["images"]
         current_note.flush()
-        mw.reset()
+        mw.reset(guiOnly=True)
         tooltip(msg)
 
     def write_history(self):
