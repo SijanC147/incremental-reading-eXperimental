@@ -266,10 +266,12 @@ def answerButtonList(self, _old):
             (2, "<font color='green'>" + _("Later") + "</font>"),
             # (3, "<font color='blue'>" + _("Custom") + "</font>"),
         )
+        self._irx_answer_flag = False
         if page_bottom == card_pos or page_bottom == 0:
             answers_button_list += (
                 (5, "<font color='purple'>" + _("Done") + "</font>"),
             )
+            self._irx_answer_flag = True
         return answers_button_list
     else:
         return _old(self)
@@ -277,9 +279,15 @@ def answerButtonList(self, _old):
 
 def answerCard(self, ease, _old):
     card = self.card
-    _old(self, ease)
     if isIrxCard(card):
+        if self._irx_answer_flag:
+            ease = ease if ease in (1, 2) else 5
+        else:
+            ease = min(ease, 2)
+        _old(self, ease)
         mw.readingManager.scheduler.answer(card, ease)
+    else:
+        _old(self, ease)
 
 
 def buttonTime(self, i, _old):
