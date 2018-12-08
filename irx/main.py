@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# pylint: disable=W0212
 from __future__ import unicode_literals
 
 import re
@@ -36,8 +36,8 @@ class ReadingManager:
         self.quickKeyActions = []
 
         addHook("profileLoaded", self.onProfileLoaded)
-        addHook("reset", self.restoreView)
-        addHook("showQuestion", self.restoreView)
+        addHook("reset", self.restore_view)
+        addHook("showQuestion", self.restore_view)
 
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager()
@@ -47,15 +47,15 @@ class ReadingManager:
         mw.viewManager = ViewManager(self.settings)
 
         if not mw.col.models.byName(self.settings["modelName"]):
-            self.setupIrxModel()
+            self.setup_irx_model()
 
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem("IR3X", "Settings", self.settingsManager.showDialog)
+            addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
             addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
-            addMenuItem("IR3X::Dev", "Update Model", self.setupIrxModel)
+            addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             addMenuItem("IR3X", "About", showAbout)
             for keys, action in self.settings["irx_controls"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
@@ -93,13 +93,13 @@ class ReadingManager:
 
         mw.readingManager.textManager.undo = patched_undo
 
-    def setupIrxModel(self):
+    def setup_irx_model(self):
         model = mw.col.models.new(self.settings["modelName"])
         for key, value in self.settings.items():
             if key[-5:] == "Field":
                 mw.col.models.addField(model, mw.col.models.newField(value))
         model["css"] = loadFile('web', 'model.css')
-        template = self.makeTemplate(
+        template = self.make_irx_template(
             name="IRX Card",
             question=loadFile("web", "question.html"),
             answer=loadFile("web", "answer.html")
@@ -107,7 +107,7 @@ class ReadingManager:
         mw.col.models.addTemplate(model, template)
         mw.col.models.add(model)
 
-    def makeTemplate(self, name, question, answer):
+    def make_irx_template(self, name, question, answer):
         template = mw.col.models.newTemplate(name)
         try:
             for field in re.findall(r"\{\{([^\s]+?)\}\}", question):
@@ -133,7 +133,7 @@ class ReadingManager:
         template["afmt"] = answer
         return template
 
-    def restoreView(self):
+    def restore_view(self):
         if viewingIrxText():
             cid = str(mw.reviewer.card.id)
             if cid not in self.settings["zoom"]:
@@ -144,23 +144,22 @@ class ReadingManager:
 
             mw.viewManager.setZoom()
             mw.viewManager.setScroll()
-            self.restoreHighlighting()
+            self.init_javascript()
 
-    def restoreHighlighting(self):
+    def init_javascript(self):
         mw.web.page().mainFrame().addToJavaScriptWindowObject(
             "pyCallback", IREJavaScriptCallback()
         )
-        initJavaScript()
-        mw.web.eval("restoreHighlighting()")
+        mw.web.eval(loadFile('web', 'model.js'))
 
     def htmlUpdated(self):
-        curNote = mw.reviewer.card.note()
-        curNote["Text"] = mw.web.page().mainFrame().toHtml()
-        curNote.flush()
-        mw.web.setHtml(curNote["Text"])
-        self.restoreView()
+        current_note = mw.reviewer.card.note()
+        current_note["Text"] = mw.web.page().mainFrame().toHtml()
+        current_note.flush()
+        mw.web.setHtml(current_note["Text"])
+        self.restore_view()
 
-    def quickAdd(self, quickKey):
+    def quick_add(self, quickKey):
         if not viewingIrxText():
             return
 
@@ -255,11 +254,6 @@ class IREJavaScriptCallback(QObject):
     @pyqtSlot(str)
     def htmlUpdated(self, context):
         mw.readingManager.htmlUpdated()
-
-
-def initJavaScript():
-    js = loadFile('web', 'model.js')
-    mw.web.eval(js)
 
 
 def answerButtonList(self, _old):

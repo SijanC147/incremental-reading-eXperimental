@@ -200,15 +200,6 @@ class Scheduler:
         mw.col.sched.forgetCards(cids)
         mw.col.sched.sortCards(cids)
 
-    def mark_card_info(self, cards_info, mark=None, mark_fn=None, card=None):
-        mark = "[{}] ".format(mark or "*")
-        card = card or mw.reviewer.card
-        cond = mark_fn if mark_fn else (lambda c_info: c_info["id"] == card.id)
-        for (index, card_info) in enumerate(cards_info):
-            if cond(card_info):
-                cards_info[index]["title"] = mark + card_info["title"]
-        return cards_info
-
     def deck_cards_info(self, did, suspended=True, buried=True):
         cards_info = []
 
@@ -238,4 +229,13 @@ class Scheduler:
                         'title': note[self.settings['titleField']]
                     }
                 )
+        return cards_info
+
+    def mark_card_info(self, cards_info, mark=None, mark_fn=None, card=None):
+        mark = "[{}] ".format(mark or "*")
+        card = card or mw.reviewer.card
+        cond = mark_fn if mark_fn else (lambda c_info: c_info["id"] == card.id)
+        for (index, card_info) in enumerate(cards_info):
+            if cond(card_info):
+                cards_info[index]["title"] = mark + card_info["title"]
         return cards_info

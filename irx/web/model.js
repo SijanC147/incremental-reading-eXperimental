@@ -110,7 +110,6 @@ function linkToNote(note_id, extract_type) {
     var selection = window.getSelection().getRangeAt(0);
     var selectedText = selection.extractContents();
 
-
     var note_link = document.createElement("a");
     note_link.className = "irx-link"
     note_link.setAttribute("href", "irxnid:" + note_id)

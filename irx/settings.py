@@ -67,26 +67,10 @@ class SettingsManager():
             IRX_REVIEWER[action]: IRX_REVIEWER_ACTIONS[action]
             for action in IRX_REVIEWER_ACTIONS.keys()
         }
-        self.highlight_colors = {
-            "irx_schedule_soon": ("#FFE11A", "#000000"),
-            "irx_schedule_later": ("#FD7400", "#000000"),
-            "irx_extract": ("#FF971A", "#000000"),
-            "flash_extract": ("#1F8A70", "#000000"),
-            "removed_text": ("#262626", "#FFFFFF")
-        }
 
         self.settingsChanged = False
-        self.loadSettings()
-
-        keys = IRX_REVIEWER.values()
-        duplicate_controls = list(
-            set([key for key in keys if keys.count(key) > 1])
-        )
-        if duplicate_controls:
-            showInfo(
-                "The following IRX shortcut(s) are assigned conflicting actions:<br/><br/>{}<br/><br/>Review and change them in editable_controls.py"
-                .format(" ".join(list(set(duplicate_controls))))
-            )
+        self.load_settings()
+        self.check_for_duplicate_hotkeys()
 
         if self.settingsChanged:
             showInfo(
@@ -96,7 +80,7 @@ class SettingsManager():
                     reconfigure the add-on to your liking."""
             )
 
-        addHook('unloadProfile', self.saveSettings)
+        addHook('unloadProfile', self.save_settings)
 
     def show_help(self):
         keys = IRX_REVIEWER.values()
@@ -140,98 +124,12 @@ class SettingsManager():
         help_dialog.setWindowModality(Qt.WindowModal)
         help_dialog.exec_()
 
-    def saveSettings(self):
-        with open(self.json_path, 'w', encoding='utf-8') as json_file:
-            self.settings["irx_controls"] = {}
-            json.dump(self.settings, json_file)
-            self.settings["irx_controls"] = self.irx_controls
-
-        updateModificationTime(self.mediaDir)
-
-    def loadSettings(self):
-        self.defaults = {
-            'zoomStep': 0.1,
-            'generalZoom': 1,
-            'lineScrollFactor': 0.05,
-            'pageScrollFactor': 0.5,
-            'schedLaterMethod': 'percent',
-            'schedLaterRandom': True,
-            'schedLaterValue': 50,
-            'schedSoonMethod': 'percent',
-            'schedSoonRandom': True,
-            'schedSoonValue': 10,
-            'modelName': 'IR3X',
-            'sourceField': 'Source',
-            'textField': 'Text',
-            'titleField': 'Title',
-            'dateField': 'Date',
-            'parentField': 'Parent',
-            'pidField': 'pid',
-            'linkField': 'Link',
-            'imagesField': 'Images',
-            'quickKeys': {},
-            'scroll': {},
-            'zoom': {},
-        }
-
-        self.mediaDir = os.path.join(mw.pm.profileFolder(), 'collection.media')
-        self.json_path = os.path.join(self.mediaDir, '_irx.json')
-
-        if os.path.isfile(self.json_path):
-            with open(self.json_path, encoding='utf-8') as json_file:
-                self.settings = json.load(json_file)
-            self.addMissingSettings()
-            self.removeOutdatedQuickKeys()
-        else:
-            self.settings = self.defaults
-
-        self.settings["irx_controls"] = self.irx_controls
-        self.settings["highlight_colors"] = self.highlight_colors
-
-        self.loadMenuItems()
-
-    def addMissingSettings(self):
-        for k, v in self.defaults.items():
-            if k not in self.settings:
-                self.settings[k] = v
-                self.settingsChanged = True
-
-    def removeOutdatedQuickKeys(self):
-        required = [
-            'alt', 'bgColor', 'ctrl', 'deckName', 'editExtract', 'editSource',
-            'fieldName', 'modelName', 'regularKey', 'shift', 'textColor'
-        ]
-
-        for keyCombo, quickKey in self.settings['quickKeys'].copy().items():
-            for k in required:
-                if k not in quickKey:
-                    self.settings['quickKeys'].pop(keyCombo)
-                    self.settingsChanged = True
-                    break
-
-    def loadMenuItems(self):
-        self.clearMenuItems()
-
-        for keyCombo, quickKey in self.settings['quickKeys'].items():
-            menuText = 'Add Card [%s -> %s]' % (
-                quickKey['modelName'], quickKey['deckName']
-            )
-            function = partial(mw.readingManager.quickAdd, quickKey)
-            mw.readingManager.quickKeyActions.append(
-                addMenuItem('Read::Quick Keys', menuText, function, keyCombo)
-            )
-
-    def clearMenuItems(self):
-        for action in mw.readingManager.quickKeyActions:
-            mw.customMenus['Read::Quick Keys'].removeAction(action)
-        mw.readingManager.quickKeyActions = []
-
-    def showDialog(self):
+    def show_settings(self):
         dialog = QDialog(mw)
 
         zoom_scroll_layout = QHBoxLayout()
-        zoom_scroll_layout.addWidget(self.createZoomGroupBox())
-        zoom_scroll_layout.addWidget(self.createScrollGroupBox())
+        zoom_scroll_layout.addWidget(self.create_zoom_group_box())
+        zoom_scroll_layout.addWidget(self.create_scroll_group_box())
         zoom_scroll_widget = QWidget()
         zoom_scroll_widget.setLayout(zoom_scroll_layout)
 
@@ -280,6 +178,65 @@ class SettingsManager():
             self.settings['schedLaterMethod'] = 'count'
 
         mw.viewManager.resetZoom(mw.state)
+
+    def save_settings(self):
+        with open(self.json_path, 'w', encoding='utf-8') as json_file:
+            self.settings["irx_controls"] = {}
+            json.dump(self.settings, json_file)
+            self.settings["irx_controls"] = self.irx_controls
+
+        updateModificationTime(self.media_dir)
+
+    def load_settings(self):
+        self.defaults = {
+            'zoomStep': 0.1,
+            'generalZoom': 1,
+            'lineScrollFactor': 0.05,
+            'pageScrollFactor': 0.5,
+            'schedLaterMethod': 'percent',
+            'schedLaterRandom': True,
+            'schedLaterValue': 50,
+            'schedSoonMethod': 'percent',
+            'schedSoonRandom': True,
+            'schedSoonValue': 10,
+            'modelName': 'IR3X',
+            'sourceField': 'Source',
+            'textField': 'Text',
+            'titleField': 'Title',
+            'dateField': 'Date',
+            'parentField': 'Parent',
+            'pidField': 'pid',
+            'linkField': 'Link',
+            'imagesField': 'Images',
+            'quickKeys': {},
+            'scroll': {},
+            'zoom': {},
+        }
+
+        self.media_dir = os.path.join(mw.pm.profileFolder(), 'collection.media')
+        self.json_path = os.path.join(self.media_dir, '_irx.json')
+
+        if os.path.isfile(self.json_path):
+            with open(self.json_path, encoding='utf-8') as json_file:
+                self.settings = json.load(json_file)
+            self.addMissingSettings()
+        else:
+            self.settings = self.defaults
+
+        self.settings["irx_controls"] = self.irx_controls
+
+    def check_for_duplicate_hotkeys(self):
+        keys = IRX_REVIEWER.values()
+        duplicate_controls = list(
+            set([key for key in keys if keys.count(key) > 1])
+        )
+        if duplicate_controls:
+            showInfo(
+                """The following IRX shortcut(s) are assigned conflicting actions:\
+<br/><br/>{}<br/><br/>Review and change them in editable_controls.py""".format(
+                    " ".join(list(set(duplicate_controls)))
+                )
+            )
 
     def create_scheduling_group_box(self):
         soon_label = QLabel('Soon Button')
@@ -350,7 +307,7 @@ class SettingsManager():
 
         return group_box
 
-    def createZoomGroupBox(self):
+    def create_zoom_group_box(self):
         zoomStepLabel = QLabel('Zoom Step')
         zoomStepPercentLabel = QLabel('%')
         generalZoomLabel = QLabel('General Zoom')
@@ -392,7 +349,7 @@ class SettingsManager():
 
         return groupBox
 
-    def createScrollGroupBox(self):
+    def create_scroll_group_box(self):
         lineStepLabel = QLabel('Line Step')
         lineStepPercentLabel = QLabel('%')
         pageStepLabel = QLabel('Page Step')
@@ -436,176 +393,8 @@ class SettingsManager():
 
         return groupBox
 
-    def createQuickKeysTab(self):
-        destDeckLabel = QLabel('Destination Deck')
-        noteTypeLabel = QLabel('Note Type')
-        textFieldLabel = QLabel('Paste Text to Field')
-        keyComboLabel = QLabel('Key Combination')
-
-        self.quickKeysComboBox = QComboBox()
-        self.quickKeysComboBox.addItem('')
-        self.quickKeysComboBox.addItems(self.settings['quickKeys'].keys())
-        self.quickKeysComboBox.currentIndexChanged.connect(
-            self.updateQuickKeysTab
-        )
-
-        self.destDeckComboBox = QComboBox()
-        self.noteTypeComboBox = QComboBox()
-        self.textFieldComboBox = QComboBox()
-        self.quickKeyEditExtractCheckBox = QCheckBox('Edit Extracted Note')
-        self.quickKeyEditSourceCheckBox = QCheckBox('Edit Source Note')
-        self.quickKeyPlainTextCheckBox = QCheckBox('Extract as Plain Text')
-
-        self.ctrlKeyCheckBox = QCheckBox('Ctrl')
-        self.shiftKeyCheckBox = QCheckBox('Shift')
-        self.altKeyCheckBox = QCheckBox('Alt')
-        self.regularKeyComboBox = QComboBox()
-        self.regularKeyComboBox.addItem('')
-        self.regularKeyComboBox.addItems(
-            list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
-        )
-
-        destDeckLayout = QHBoxLayout()
-        destDeckLayout.addWidget(destDeckLabel)
-        destDeckLayout.addWidget(self.destDeckComboBox)
-
-        noteTypeLayout = QHBoxLayout()
-        noteTypeLayout.addWidget(noteTypeLabel)
-        noteTypeLayout.addWidget(self.noteTypeComboBox)
-
-        textFieldLayout = QHBoxLayout()
-        textFieldLayout.addWidget(textFieldLabel)
-        textFieldLayout.addWidget(self.textFieldComboBox)
-
-        keyComboLayout = QHBoxLayout()
-        keyComboLayout.addWidget(keyComboLabel)
-        keyComboLayout.addStretch()
-        keyComboLayout.addWidget(self.ctrlKeyCheckBox)
-        keyComboLayout.addWidget(self.shiftKeyCheckBox)
-        keyComboLayout.addWidget(self.altKeyCheckBox)
-        keyComboLayout.addWidget(self.regularKeyComboBox)
-
-        deckNames = ["[Mirror]"]
-        deckNames += sorted([d['name'] for d in mw.col.decks.all()])
-        self.destDeckComboBox.addItem('')
-        self.destDeckComboBox.addItems(deckNames)
-
-        modelNames = sorted([m['name'] for m in mw.col.models.all()])
-        self.noteTypeComboBox.addItem('')
-        self.noteTypeComboBox.addItems(modelNames)
-        self.noteTypeComboBox.currentIndexChanged.connect(self.updateFieldList)
-
-        newButton = QPushButton('New')
-        newButton.clicked.connect(self.clearQuickKeysTab)
-        deleteButton = QPushButton('Delete')
-        deleteButton.clicked.connect(self.deleteQuickKey)
-        saveButton = QPushButton('Save')
-        saveButton.clicked.connect(self.setQuickKey)
-
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addStretch()
-        buttonLayout.addWidget(newButton)
-        buttonLayout.addWidget(deleteButton)
-        buttonLayout.addWidget(saveButton)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.quickKeysComboBox)
-        layout.addLayout(destDeckLayout)
-        layout.addLayout(noteTypeLayout)
-        layout.addLayout(textFieldLayout)
-        layout.addLayout(keyComboLayout)
-        layout.addWidget(self.quickKeyEditExtractCheckBox)
-        layout.addWidget(self.quickKeyEditSourceCheckBox)
-        layout.addWidget(self.quickKeyPlainTextCheckBox)
-        layout.addLayout(buttonLayout)
-
-        tab = QWidget()
-        tab.setLayout(layout)
-
-        return tab
-
-    def updateQuickKeysTab(self):
-        quickKey = self.quickKeysComboBox.currentText()
-        if quickKey:
-            model = self.settings['quickKeys'][quickKey]
-            setComboBoxItem(self.destDeckComboBox, model['deckName'])
-            setComboBoxItem(self.noteTypeComboBox, model['modelName'])
-            setComboBoxItem(self.textFieldComboBox, model['fieldName'])
-            self.ctrlKeyCheckBox.setChecked(model['ctrl'])
-            self.shiftKeyCheckBox.setChecked(model['shift'])
-            self.altKeyCheckBox.setChecked(model['alt'])
-            setComboBoxItem(self.regularKeyComboBox, model['regularKey'])
-            self.quickKeyEditExtractCheckBox.setChecked(model['editExtract'])
-            self.quickKeyEditSourceCheckBox.setChecked(model['editSource'])
-            self.quickKeyPlainTextCheckBox.setChecked(model['plainText'])
-        else:
-            self.clearQuickKeysTab()
-
-    def updateFieldList(self):
-        modelName = self.noteTypeComboBox.currentText()
-        self.textFieldComboBox.clear()
-        if modelName:
-            model = mw.col.models.byName(modelName)
-            fieldNames = [f['name'] for f in model['flds']]
-            self.textFieldComboBox.addItems(fieldNames)
-
-    def clearQuickKeysTab(self):
-        self.quickKeysComboBox.setCurrentIndex(0)
-        self.destDeckComboBox.setCurrentIndex(0)
-        self.noteTypeComboBox.setCurrentIndex(0)
-        self.textFieldComboBox.setCurrentIndex(0)
-        self.ctrlKeyCheckBox.setChecked(False)
-        self.shiftKeyCheckBox.setChecked(False)
-        self.altKeyCheckBox.setChecked(False)
-        self.regularKeyComboBox.setCurrentIndex(0)
-        self.quickKeyEditExtractCheckBox.setChecked(False)
-        self.quickKeyEditSourceCheckBox.setChecked(False)
-        self.quickKeyPlainTextCheckBox.setChecked(False)
-
-    def deleteQuickKey(self):
-        quickKey = self.quickKeysComboBox.currentText()
-        if quickKey:
-            self.settings['quickKeys'].pop(quickKey)
-            removeComboBoxItem(self.quickKeysComboBox, quickKey)
-            self.clearQuickKeysTab()
-            self.loadMenuItems()
-
-    def setQuickKey(self):
-        quickKey = {
-            'deckName': self.destDeckComboBox.currentText(),
-            'modelName': self.noteTypeComboBox.currentText(),
-            'fieldName': self.textFieldComboBox.currentText(),
-            'ctrl': self.ctrlKeyCheckBox.isChecked(),
-            'shift': self.shiftKeyCheckBox.isChecked(),
-            'alt': self.altKeyCheckBox.isChecked(),
-            'regularKey': self.regularKeyComboBox.currentText(),
-            'bgColor': self.bgColorComboBox.currentText(),
-            'textColor': self.textColorComboBox.currentText(),
-            'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
-            'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
-            'plainText': self.quickKeyPlainTextCheckBox.isChecked()
-        }
-
-        for k in ['deckName', 'modelName', 'regularKey']:
-            if not quickKey[k]:
-                showInfo(
-                    """
-                        Please complete all settings. Destination deck,
-                        note type, and a letter or number for the key 
-                        combination are required."""
-                )
-                return
-
-        keyCombo = ''
-        if quickKey['ctrl']:
-            keyCombo += 'Ctrl+'
-        if quickKey['shift']:
-            keyCombo += 'Shift+'
-        if quickKey['alt']:
-            keyCombo += 'Alt+'
-        keyCombo += quickKey['regularKey']
-
-        self.settings['quickKeys'][keyCombo] = quickKey
-        self.loadMenuItems()
-
-        showInfo('New shortcut added: %s' % keyCombo)
+    def addMissingSettings(self):
+        for k, v in self.defaults.items():
+            if k not in self.settings:
+                self.settings[k] = v
+                self.settingsChanged = True
