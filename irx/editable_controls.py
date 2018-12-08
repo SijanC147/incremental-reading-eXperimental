@@ -1,5 +1,5 @@
-IRX_REVIEWER = {
-    "show help": "?",
+REVIEWER_CONTROLS = {
+    "show help": "? i",
     "toggle images": "Shift+m",
     "toggle formatting": "Shift+f",
     "toggle removed text": "Shift+z",
@@ -29,7 +29,7 @@ IRX_REVIEWER = {
     "page down": "PgDown"
 }
 
-IRX_IMAGE_MANAGER = {
+IMAGE_MANAGER_CONTROLS = {
     "edit image caption": "e",
     "mark image(s) for deletion": "d",
     "take image(s) (for reordering)": "t",
