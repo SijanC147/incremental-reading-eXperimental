@@ -55,10 +55,10 @@ class ReadingManager:
 
         if not self.controlsLoaded:
             addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
-            addMenuItem("IR3X", "Help", self.settingsManager.show_help)
             addMenuItem("IR3X", "Quick Keys", self.quickKeys.show_dialog)
             addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
+            addMenuItem("IR3X", "Help", self.settingsManager.show_help)
             addMenuItem("IR3X", "About", showAbout)
             for keys, action in self.settings["irx_controls"].items():
                 if len(keys) > 1 and keys.find("+") >= 0:
@@ -148,6 +148,10 @@ class ReadingManager:
             mw.viewManager.setZoom()
             mw.viewManager.setScroll()
             self.init_javascript()
+            note = mw.reviewer.card.note()
+            note_images = getField(note, self.settings["imagesField"])
+            if not note_images:
+                mw.web.eval('toggleImagesSidebar(false);')
 
     def init_javascript(self):
         mw.web.page().mainFrame().addToJavaScriptWindowObject(
