@@ -66,7 +66,6 @@ class TextManager:
     def manage_images(self, note=None):
         note = note or mw.reviewer.card.note()
         soup = bs(getField(note, self.settings["imagesField"]))
-        history = []
 
         def image_list(soup):
             images = []
@@ -93,6 +92,7 @@ class TextManager:
 
         images = image_list(soup)
         if not images:
+            tooltip("No images have been extracted from this note")
             return
 
         self.image_list_widget = QListWidget()
@@ -375,21 +375,18 @@ class TextManager:
         texts = [t for t in mime_data.text().split("\n") if t]
         images_templ = ""
         for index, image in enumerate(images):
-            if not skip_captions:
-                try:
-                    caption, ret = getText(
-                        "Add a caption for the image",
-                        title="Extract Image",
-                        default=texts[index]
-                    )
-                except IndexError:
-                    caption, ret = getText(
-                        "Add a caption for the image",
-                        title="Extract Image",
-                        default=pretty_date()
-                    )
-            else:
-                caption = pretty_date()
+            try:
+                caption, ret = getText(
+                    "Add a caption for the image",
+                    title="Extract Image",
+                    default=texts[index]
+                ) if not skip_captions else (texts[index], 1)
+            except IndexError:
+                caption, ret = getText(
+                    "Add a caption for the image",
+                    title="Extract Image",
+                    default=pretty_date()
+                ) if not skip_captions else (pretty_date(), 1)
             if ret == 1:
                 media = mw.col.media
                 filename = media.stripIllegal(caption[:50])

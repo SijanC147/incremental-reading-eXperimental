@@ -27,9 +27,9 @@ from irx.util import (
     db_log,
 )
 
-from irx.editable_controls import IRX_REVIEWER, IRX_IMAGE_MANAGER
+from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 
-IRX_REVIEWER_ACTIONS = {
+REVIEWER_FUNCTIONS = {
     "show help": lambda: mw.readingManager.settingsManager.show_help(),
     "toggle images": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
     "toggle formatting": lambda: mw.readingManager.textManager.toggle_show_formatting(),
@@ -63,14 +63,10 @@ IRX_REVIEWER_ACTIONS = {
 
 class SettingsManager():
     def __init__(self):
-        self.irx_controls = {
-            IRX_REVIEWER[action]: IRX_REVIEWER_ACTIONS[action]
-            for action in IRX_REVIEWER_ACTIONS.keys()
-        }
-
         self.settingsChanged = False
+        self.irx_controls = self.build_control_map()
+        self.duplicate_controls = self.check_for_duplicate_controls()
         self.load_settings()
-        self.check_for_duplicate_hotkeys()
 
         if self.settingsChanged:
             showInfo(
@@ -82,32 +78,72 @@ class SettingsManager():
 
         addHook('unloadProfile', self.save_settings)
 
-    def show_help(self):
-        keys = IRX_REVIEWER.values()
+    def build_control_map(self):
+        irx_controls = {}
+        for key, values in REVIEWER_CONTROLS.items():
+            for value in values.split(" "):
+                irx_controls[value] = REVIEWER_FUNCTIONS[key]
+        return irx_controls
+
+    def check_for_duplicate_controls(self):
+        keys = sum(
+            [values.split(" ") for values in REVIEWER_CONTROLS.values()], []
+        )
         duplicate_controls = list(
             set([key for key in keys if keys.count(key) > 1])
         )
-        help_text = "<table>"
-        actions = IRX_REVIEWER_ACTIONS.keys()
-        for i in range(0, len(actions), 2):
-            if IRX_REVIEWER[actions[i]] not in duplicate_controls:
-                hotkey_text = mac_fix(IRX_REVIEWER[actions[i]])
-            else:
-                hotkey_text = "<font color='red'>" + mac_fix(
-                    IRX_REVIEWER[actions[i]]
-                ) + "</font>"
-            help_text += "<tr>"
-            help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(
-                hotkey=hotkey_text, action=actions[i]
+        if duplicate_controls:
+            duplicate_assigned_actions = {
+                duplicate: [
+                    key for key, val in REVIEWER_FUNCTIONS.items()
+                    if val == self.irx_controls[duplicate]
+                ][0]
+                for duplicate in duplicate_controls
+            }
+            showInfo(
+                """The following hotkeys were assigned multiple actions \
+they have been assigned these actions this time, but these can change erratically \
+unless the settings are fixed in <code>editable_controls.py</code>:\
+<br/><br/>{}""".format(
+                    "<br/>".join(
+                        [
+                            "<code><font color='red'>{0}</font></code> : {1}".
+                            format(k, v)
+                            for k, v in duplicate_assigned_actions.items()
+                        ]
+                    )
+                )
             )
-            if i + 1 < len(actions):
-                if IRX_REVIEWER[actions[i + 1]] not in duplicate_controls:
-                    hotkey_text = mac_fix(IRX_REVIEWER[actions[i + 1]])
-                else:
-                    hotkey_text = "<font color='red'>" + mac_fix(
-                        IRX_REVIEWER[actions[i + 1]]
-                    ) + "</font>"
-                help_text += "<td style='padding: 5px'><b>{hotkey}</b></td><td style='padding: 5px'>{action}</td>".format(
+        return duplicate_controls
+
+    def show_help(self):
+        help_text = "<table>"
+        actions = REVIEWER_FUNCTIONS.keys()
+        for i in range(0, len(actions), 2):
+            hotkeys_text = []
+            for hotkey in REVIEWER_CONTROLS[actions[i]].split(" "):
+                hotkey_text = mac_fix(hotkey)
+                if hotkey in self.duplicate_controls:
+                    hotkey_text = "<font color='red'>{}</font>".format(
+                        hotkey_text
+                    )
+                hotkeys_text.append(hotkey_text)
+            hotkeys_text = "</b></code> or <code><b>".join(hotkeys_text)
+            help_text += "<tr>"
+            help_text += "<td style='padding: 5px'><b><code>{hotkey}</code></b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(
+                hotkey=hotkeys_text, action=actions[i]
+            )
+            if (i + 1) < len(actions):
+                hotkeys_text = []
+                for hotkey in REVIEWER_CONTROLS[actions[i + 1]].split(" "):
+                    hotkey_text = mac_fix(hotkey)
+                    if hotkey in self.duplicate_controls:
+                        hotkey_text = "<font color='red'>{}</font>".format(
+                            hotkey_text
+                        )
+                    hotkeys_text.append(hotkey_text)
+                hotkeys_text = "</b></code> or <code><b>".join(hotkeys_text)
+                help_text += "<td style='padding: 5px'><b><code>{hotkey}</code></b></td><td style='padding: 5px'>{action}</td>".format(
                     hotkey=hotkey_text, action=actions[i + 1]
                 )
             else:
@@ -122,6 +158,16 @@ class SettingsManager():
         help_layout.addWidget(help_label)
         help_dialog.setLayout(help_layout)
         help_dialog.setWindowModality(Qt.WindowModal)
+
+        def hide_help(evt, _orig):
+            if unicode(evt.text()) in REVIEWER_CONTROLS["show help"].split(" "):
+                help_dialog.accept()
+            else:
+                return _orig(evt)
+
+        orig_dialog_handler = help_dialog.keyPressEvent
+        help_dialog.keyPressEvent = lambda evt: hide_help(evt, orig_dialog_handler)
+
         help_dialog.exec_()
 
     def show_settings(self):
@@ -219,24 +265,11 @@ class SettingsManager():
         if os.path.isfile(self.json_path):
             with open(self.json_path, encoding='utf-8') as json_file:
                 self.settings = json.load(json_file)
-            self.addMissingSettings()
+            self.add_missing_settings()
         else:
             self.settings = self.defaults
 
         self.settings["irx_controls"] = self.irx_controls
-
-    def check_for_duplicate_hotkeys(self):
-        keys = IRX_REVIEWER.values()
-        duplicate_controls = list(
-            set([key for key in keys if keys.count(key) > 1])
-        )
-        if duplicate_controls:
-            showInfo(
-                """The following IRX shortcut(s) are assigned conflicting actions:\
-<br/><br/>{}<br/><br/>Review and change them in editable_controls.py""".format(
-                    " ".join(list(set(duplicate_controls)))
-                )
-            )
 
     def create_scheduling_group_box(self):
         soon_label = QLabel('Soon Button')
@@ -393,7 +426,7 @@ class SettingsManager():
 
         return groupBox
 
-    def addMissingSettings(self):
+    def add_missing_settings(self):
         for k, v in self.defaults.items():
             if k not in self.settings:
                 self.settings[k] = v
