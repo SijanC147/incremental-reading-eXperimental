@@ -4,3 +4,4 @@ aqt
 *.ipynb
 .ipynb_checkpoints
 .python-version
+debug.html

@@ -45,10 +45,10 @@ REVIEWER_FUNCTIONS = {
     "extract complimentary": lambda: mw.readingManager.textManager.extract(schedule_extract=2),
     "extract important (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=1),
     "extract complimentary (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=2),
-    "bold": lambda: mw.readingManager.textManager.format("bold"),
-    "underline": lambda: mw.readingManager.textManager.format("underline"),
-    "italic": lambda: mw.readingManager.textManager.format("italic"),
-    "strikethrough": lambda: mw.readingManager.textManager.format("strike"),
+    "bold": lambda: mw.readingManager.textManager.style("bold"),
+    "underline": lambda: mw.readingManager.textManager.style("underline"),
+    "italic": lambda: mw.readingManager.textManager.style("italic"),
+    "strikethrough": lambda: mw.readingManager.textManager.style("strikeThrough"),
     "remove": lambda: mw.readingManager.textManager.remove(),
     "show reading list": lambda: mw.readingManager.scheduler.show_organizer(),
     "show image manager": lambda: mw.readingManager.textManager.manage_images(),
@@ -57,18 +57,18 @@ REVIEWER_FUNCTIONS = {
     "line up": lambda: mw.viewManager.lineUp(),
     "line down": lambda: mw.viewManager.lineDown(),
     "page up": lambda: mw.viewManager.pageUp(),
-    "page down": lambda: mw.viewManager.pageDown()
+    "page down": lambda: mw.viewManager.pageDown(),
 }
 
 
 class SettingsManager():
     def __init__(self):
-        self.settingsChanged = False
+        self.settings_changed = False
         self.irx_controls = self.build_control_map()
         self.duplicate_controls = self.check_for_duplicate_controls()
         self.load_settings()
 
-        if self.settingsChanged:
+        if self.settings_changed:
             showInfo(
                 """
                     Your Incremental Reading settings file has been modified
@@ -430,4 +430,4 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
         for k, v in self.defaults.items():
             if k not in self.settings:
                 self.settings[k] = v
-                self.settingsChanged = True
+                self.settings_changed = True

@@ -26,6 +26,7 @@ from aqt.utils import getText, showInfo, tooltip
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
 from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id
+from irx.editable_controls import HIGHLIGHT_COLORS
 
 
 class TextManager:
@@ -39,28 +40,41 @@ class TextManager:
         else:
             self.history = defaultdict(list)
 
-    def format(self, style):
-        mw.web.eval('format("%s")' % style)
-        self.save()
+    def format_text_range(self, attrs):
+        identifier = str(int(time.time() * 10))
+        js_obj = ",".join(['{0}:"{1}"'.format(k, v) for k, v in attrs.items()])
+        mw.web.eval('execCommandOnRange(%s, {%s}, null)' % (identifier, js_obj))
+        self.save(linked_nid=attrs.get("link"))
+
+    def style(self, styles):
+        self.format_text_range({"styles": styles})
+
+    def remove(self):
+        self.format_text_range({"remove": ""})
 
     def linkNote(self, note, extract_type=""):
-        mw.web.eval('linkToNote("%s", "%s")' % (note.id, extract_type))
-        self.save(note_linked=note)
+        self.format_text_range(
+            {
+                "bg": HIGHLIGHT_COLORS[extract_type][0],
+                "fg": HIGHLIGHT_COLORS[extract_type][1],
+                "link": note.id,
+            }
+        )
 
     def toggle_images_sidebar(self, manual=None):
         mw.web.eval('toggleImagesSidebar("%s")' % (manual or "toggle"))
         mw.reviewer.card.note().flush()
 
     def toggle_show_removed(self, manual=None):
-        mw.web.eval('toggleShowRemoved("%s")' % (manual or "toggle"))
+        mw.web.eval('toggleRemoved("%s")' % (manual or "toggle"))
         mw.reviewer.card.note().flush()
 
     def toggle_show_formatting(self, manual=None):
-        mw.web.eval('toggleShowFormatting("%s")' % (manual or "toggle"))
+        mw.web.eval('toggleStyles("%s")' % (manual or "toggle"))
         mw.reviewer.card.note().flush()
 
     def toggle_show_extracts(self, manual=None):
-        mw.web.eval('toggleShowExtracts("%s")' % (manual or "toggle"))
+        mw.web.eval('toggleHighlights("%s")' % (manual or "toggle"))
         mw.reviewer.card.note().flush()
 
     def manage_images(self, note=None):
@@ -434,32 +448,24 @@ class TextManager:
         add_cards.modelChooser.models.setText(model_name)
         return True
 
-    def remove(self):
-        mw.web.eval("removeText()")
-        self.save()
-
-    def save(self, note_linked=None):
+    def save(self, linked_nid=None):
         current_view = mw.web.page().mainFrame().toHtml()
         soup = bs(current_view)
         text_div = soup.find("div", {"class": "irx-text"})
         images_div = soup.find("div", {"class": "irx-images"})
         if text_div:
             current_note = mw.reviewer.card.note()
+            note_linked = mw.col.getNote(linked_nid) if linked_nid else None
+            action = {
+                "type": "irx-extract",
+                "nid": linked_nid,
+                "title": getField(note_linked, self.settings["titleField"])
+            } if note_linked else {}
             self.history[current_note.id].append(
                 {
                     "text": current_note["Text"],
                     "images": current_note["Images"],
-                    "action":
-                        {
-                            "type":
-                                "irx-extract",
-                            "nid":
-                                note_linked.id,
-                            "title":
-                                getField(
-                                    note_linked, self.settings["titleField"]
-                                )
-                        } if note_linked else {}
+                    "action": action,
                 }
             )
             current_note["Text"] = "".join(
