@@ -23,6 +23,7 @@ from irx.about import showAbout
 from irx.settings import SettingsManager
 from irx.schedule import Scheduler
 from irx.text import TextManager
+from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
     viewingIrxText, loadFile, db_log
@@ -44,6 +45,7 @@ class ReadingManager:
         self.settings = self.settingsManager.settings
         self.scheduler = Scheduler(self.settings)
         self.textManager = TextManager(self.settings)
+        self.quickKeys = QuickKeys(self.settings)
         mw.viewManager = ViewManager(self.settings)
 
         if not mw.col.models.byName(self.settings["modelName"]):
@@ -54,6 +56,7 @@ class ReadingManager:
         if not self.controlsLoaded:
             addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
+            addMenuItem("IR3X", "Quick Keys", self.quickKeys.show_dialog)
             addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             addMenuItem("IR3X", "About", showAbout)

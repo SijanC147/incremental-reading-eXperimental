@@ -37,11 +37,16 @@ def viewingIrxText():
         return False
 
 
-def mac_fix(keys):
+def mac_fix(keys, reverse=False):
     if sys.platform == "darwin":
-        keys = keys.replace("Ctrl", "Cmd")
-        keys = keys.replace("Alt", "Opt")
-        keys = keys.replace("Meta", "Ctrl")
+        if not reverse:
+            keys = keys.replace("Ctrl", "Cmd")
+            keys = keys.replace("Alt", "Opt")
+            keys = keys.replace("Meta", "Ctrl")
+        else:
+            keys = keys.replace("Cmd", "Ctrl")
+            keys = keys.replace("Opt", "Alt")
+            keys = keys.replace("Ctrl", "Meta")
     return keys
 
 
