@@ -55,7 +55,9 @@ class ReadingManager:
 
         if not self.controlsLoaded:
             addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
-            addMenuItem("IR3X", "Quick Keys", self.quickKeys.show_dialog)
+            addMenuItem(
+                "IR3X::Quick Keys", "Manage", self.quickKeys.show_dialog
+            )
             addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
@@ -64,6 +66,7 @@ class ReadingManager:
                 if len(keys) > 1 and keys.find("+") >= 0:
                     addShortcut(action, keys)
             self.controlsLoaded = True
+        self.quickKeys.refresh_menu_items()
 
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
@@ -166,74 +169,72 @@ class ReadingManager:
         mw.web.setHtml(current_note["Text"])
         self.restore_view()
 
-    def quick_add(self, quickKey):
-        if not viewingIrxText():
+    def quick_add(self, quick_key):
+        if not viewingIrxText() and mw.web.selectedText():
             return
 
-        hasSelection = False
-        selectedText = ""
-        self.textManager.toggle_show_removed("no")
+        has_selection = False
+        selected_text = ""
+        mw.web.eval('toggleRemoved(false);')
 
-        if len(mw.web.selectedText()) > 0:
-            hasSelection = True
+        if mw.web.selectedText():
+            has_selection = True
             mw.web.triggerPageAction(QWebPage.Copy)
             clipboard = QApplication.clipboard()
-            mimeData = clipboard.mimeData()
-            if quickKey["plainText"]:
-                selectedText = mimeData.text()
+            mime_data = clipboard.mimeData()
+            if quick_key["plainText"]:
+                selected_text = mime_data.text()
             else:
-                selectedText = mimeData.html()
+                selected_text = mime_data.html()
 
-        # Create new note with selected model and deck
-        newModel = mw.col.models.byName(quickKey["modelName"])
-        newNote = notes.Note(mw.col, newModel)
-        setField(newNote, quickKey["fieldName"], selectedText)
+        current_card = mw.reviewer.card
+        current_note = current_card.note()
+        model = mw.col.models.byName(quick_key["modelName"])
+        new_note = notes.Note(mw.col, model)
+        for field in [f['name'] for f in model['flds']]:
+            target_field_text = quick_key["fields"].get(field)
+            if target_field_text:
+                templ_vals = re.findall(r"\{\{([^\s]+?)\}\}", target_field_text)
+                for target_field in templ_vals:
+                    replacement = selected_text if target_field.lower(
+                    ) == "text" else getField(current_note, target_field)
+                    target_field_text = target_field_text.replace(
+                        "{{%s}}" % target_field, replacement, 1
+                    )
+            setField(new_note, field, target_field_text)
 
-        card = mw.reviewer.card
-        currentNote = card.note()
-        tags = currentNote.stringTags()
-        # Sets tags for the note, but still have to set them in the editor
-        #   if show dialog (see below)
-        newNote.setTagsFromStr(tags)
+        new_note.setTagsFromStr(current_note.stringTags())
 
-        for f in newModel["flds"]:
-            if self.settings["sourceField"] == f["name"]:
-                setField(
-                    newNote,
-                    self.settings["sourceField"],
-                    getField(currentNote, self.settings["sourceField"]),
-                )
-
-        # Sean: Added intelligen way to mirror the deck from IR to non IR
-        intelli_deck_name = (
-            mw.col.decks.get(card.did
+        target_deck_name = (
+            mw.col.decks.get(current_card.did
                             )["name"].replace("Incremental Reading::", "")
-            if quickKey["deckName"] == "[Mirror]" else quickKey["deckName"]
+            if quick_key["deckName"] == "[Mirror]" else quick_key["deckName"]
         )
-        deckId = mw.col.decks.byName(intelli_deck_name)
-        if not deckId:
+        target_deck = mw.col.decks.byName(target_deck_name)
+        if not target_deck:
             try:
                 mw.requireReset()
-                mw.col.decks.id(intelli_deck_name)
+                mw.col.decks.id(target_deck_name)
             finally:
                 if mw.col:
                     mw.maybeReset()
+            target_deck = mw.col.decks.byName(target_deck_name)
 
-        # Sean: Replace all instances of the quickKey["deckName"] with intelli_deck_name
-        if quickKey["editExtract"]:
-            link_to_note = self.textManager._editExtract(
-                newNote, deckId, quickKey["modelName"]
-            )
-        elif hasSelection:
-            deckId = mw.col.decks.byName(intelli_deck_name)["id"]
-            newNote.model()["did"] = deckId
-            ret = newNote.dupeOrEmpty()
+        link_to_note = self.textManager._editExtract(
+            new_note, target_deck["id"], quick_key["modelName"]
+        ) if quick_key["editExtract"] else True
+        db_log(link_to_note)
+
+        if link_to_note:
+            did = mw.col.decks.byName(target_deck_name)["id"]
+            new_note.model()["did"] = did
+            ret = new_note.dupeOrEmpty()
             if ret == 1:
                 showWarning(
                     _("The first field is empty."), help="AddItems#AddError"
                 )
                 return
-            cards = mw.col.addNote(newNote)
+            cards = mw.col.addNote(new_note)
             if not cards:
                 showWarning(
                     _(
@@ -244,17 +245,11 @@ class ReadingManager:
                     help="AddItems",
                 )
                 return
-            link_to_note = True
-
+            self.textManager.linkNote(new_note, "card")
             clearAudioQueue()
             mw.col.autosave()
-            tooltip(_("Added"))
-
-        if link_to_note:
-            self.textManager.linkNote(newNote.id)
-
-        if quickKey["editSource"]:
-            EditCurrent(mw)
+            if quick_key["editSource"]:
+                EditCurrent(mw)
 
 
 class IREJavaScriptCallback(QObject):
