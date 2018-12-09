@@ -25,6 +25,23 @@ class QuickKeys:
     def __init__(self, settings):
         self.settings = settings
 
+    def refresh_menu_items(self):
+        for action in mw.readingManager.quickKeyActions:
+            mw.customMenus['IR3X::Quick Keys'].removeAction(action)
+        mw.readingManager.quickKeyActions = []
+
+        for keys, params in self.settings['quickKeys'].items():
+            mw.readingManager.quickKeyActions.append(
+                addMenuItem(
+                    menuName='IR3X::Quick Keys',
+                    text="{0} -> {1}".format(
+                        params['modelName'], params['deckName']
+                    ),
+                    function=partial(mw.readingManager.quick_add, params),
+                    keys=keys
+                )
+            )
+
     def show_dialog(self):
         self.dialog = QDialog(mw)
         self.target_fields = {}
@@ -34,7 +51,7 @@ class QuickKeys:
             [mac_fix(key) for key in self.settings['quickKeys'].keys()]
         )
         self.quickKeysComboBox.currentIndexChanged.connect(
-            self.updateQuickKeysTab
+            self.update_quick_keys_dialog
         )
 
         destDeckLayout = QHBoxLayout()
@@ -90,7 +107,7 @@ class QuickKeys:
         delete_button.clicked.connect(self.delete_quick_key)
         delete_button.setFocusPolicy(Qt.NoFocus)
         save_button = QPushButton('Save')
-        save_button.clicked.connect(self.setQuickKey)
+        save_button.clicked.connect(self.save_quick_key)
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
@@ -112,7 +129,7 @@ class QuickKeys:
         self.dialog.setWindowTitle('IR3X Quick Keys')
         self.dialog.exec_()
 
-    def updateQuickKeysTab(self):
+    def update_quick_keys_dialog(self):
         quick_key = mac_fix(self.quickKeysComboBox.currentText(), reverse=True)
         if quick_key:
             model = self.settings['quickKeys'][quick_key]
@@ -218,7 +235,7 @@ class QuickKeys:
             removeComboBoxItem(self.quickKeysComboBox, quick_key)
             self.clear_quick_keys_dialog()
 
-    def setQuickKey(self):
+    def save_quick_key(self):
         quick_key = {
             'deckName': self.destDeckComboBox.currentText(),
             'modelName': self.noteTypeComboBox.currentText(),
@@ -257,5 +274,6 @@ class QuickKeys:
         key_combo += quick_key['regularKey']
 
         self.settings['quickKeys'][key_combo] = quick_key
+        self.refresh_menu_items()
 
         showInfo('New shortcut added: %s' % mac_fix(key_combo))

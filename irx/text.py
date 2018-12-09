@@ -98,6 +98,8 @@ class TextManager:
                             ).text,
                         "src":
                             div.findChild('img').get('src'),
+                        "url":
+                            div.findAll('a')[1].get('href') if len(div.findAll('a')) == 2 else None,
                         "html":
                             str(div.extract())
                     }
@@ -229,7 +231,10 @@ class TextManager:
         if res == 1:
             self.save()
             images = [
-                "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'><span class='irx-caption'>{caption}</span></a></div>"
+                "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><a href='{url}'><span class='irx-caption'>{caption}</span></a></div>"
+                .format(
+                    id=image["id"], src=image["src"], url=image['url'], caption=image["caption"]
+                ) if image['url'] else "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>"
                 .format(
                     id=image["id"], src=image["src"], caption=image["caption"]
                 ) for image in [
@@ -361,8 +366,10 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             images = []
+            image_urls = []
             soup = bs(mime_data.html())
             for media_path in [img.get('src') for img in soup.findAll('img')]:
+                img_data = None
                 try:
                     img_data = urllib2.urlopen(media_path).read()
                 except ValueError:
@@ -379,7 +386,9 @@ class TextManager:
                             )
                         )
                         continue
-                images.append(img_data)
+                if img_data:
+                    images.append(img_data)
+                    image_urls.append(media_path)
             if not images:
                 showInfo("Could not find any images to extract")
                 return
@@ -408,15 +417,23 @@ class TextManager:
                     filename += "_1"
                 try:
                     media.writeData(filename, image)
+                    images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><a href='{url}'><span class='irx-caption'>{caption}</span></a></div>".format(
+                        id=timestamp_id(),
+                        url=image_urls[index],
+                        src=filename,
+                        caption=caption
+                    )
                 except TypeError:
                     buf = QBuffer()
                     buf.open(QBuffer.ReadWrite)
                     filename += ".png"
                     image.save(buf, "PNG", quality=65)
                     media.writeData(filename, buf.data())
-                images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'><span class='irx-caption'>{caption}</span></a></div>".format(
-                    id=timestamp_id(), src=filename, caption=caption
-                )
+                    images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>".format(
+                        id=timestamp_id(),
+                        src=filename,
+                        caption=caption
+                    )
         if images_templ:
             current_card = mw.reviewer.card
             current_note = current_card.note()
@@ -459,7 +476,7 @@ class TextManager:
             action = {
                 "type": "irx-extract",
                 "nid": linked_nid,
-                "title": getField(note_linked, self.settings["titleField"])
+                "title": (getField(note_linked, self.settings["titleField"]) if note_linked.model()["name"] == self.settings["modelName"] else None)
             } if note_linked else {}
             self.history[current_note.id].append(
                 {
@@ -499,13 +516,16 @@ class TextManager:
             extract_nid = action["nid"]
             try:
                 extract = mw.col.getNote(extract_nid)
-                extract_title = getField(extract, self.settings["titleField"])
+                try:
+                    extract_title = getField(extract, self.settings["titleField"])
+                except KeyError:
+                    extract_title = extract_nid
                 mw.col.remNotes([extract_nid])
                 mw.readingManager.scheduler.update_organizer()
                 msg += "<br/> Deleted note: {}".format(extract_title)
             except TypeError:
                 msg += "<br/> Linked note [{}] no longer exists.".format(
-                    action["title"]
+                    action["title"] or action["nid"]
                 )
         current_note["Text"] = save_data["text"]
         current_note["Images"] = save_data["images"]
