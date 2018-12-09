@@ -4,6 +4,7 @@ import os
 import urllib2
 import re
 import time
+from codecs import open
 from io import BytesIO
 import base64
 from os.path import normpath, basename, join, exists
@@ -385,6 +386,8 @@ class TextManager:
             remove_src = False
 
         image_data, captions, image_urls = self._grab_images_from_clipboard()
+        if not image_data:
+            return 
 
         images_templ = ""
         for index, image in enumerate(image_data):
@@ -426,7 +429,7 @@ class TextManager:
         return template.format(id=timestamp_id(), src=src, url=url, caption=caption) if url else template.format(id=timestamp_id(), src=src, caption=caption)
 
 
-    def _save_image_to_col(self, image_data, filename, quality=65, replace=False):
+    def _save_image_to_col(self, image_data, filename, quality=85, replace=False):
         media = mw.col.media
         filepath = media.stripIllegal(filename)
         if exists(join(media.dir(), filepath)) and replace:
@@ -459,7 +462,13 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             soup = bs(mime_data.html())
-            for media_path in [img.get('src') for img in soup.findAll('img')]:
+            for img in soup.findAll('img'):
+                parent = img.findParent('a', {'href': re.compile(r"wikipedia\.org/wiki/File:", flags=re.IGNORECASE)})
+                if parent:
+                    wiki_soup = bs(urllib2.urlopen(parent.get('href')))
+                    media_path = wiki_soup.findAll('div', attrs={"id": "file"})[0].findChild('a').get('href')
+                else:
+                    media_path = img.get('src')
                 img_data = None
                 try:
                     img_data = urllib2.urlopen(media_path).read()
@@ -482,7 +491,6 @@ class TextManager:
                     image_urls.append(media_path)
             if not image_data:
                 showInfo("Could not find any images to extract")
-                return
         else:
             image_data = [image]
         
