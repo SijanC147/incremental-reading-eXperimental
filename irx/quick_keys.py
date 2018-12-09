@@ -245,8 +245,6 @@ class QuickKeys:
             'alt': self.altKeyCheckBox.isChecked(),
             'meta': self.metaKeyCheckBox.isChecked(),
             'regularKey': self.regularKeyComboBox.currentText(),
-            # 'bgColor': self.bgColorComboBox.currentText(),
-            # 'textColor': self.textColorComboBox.currentText(),
             'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
             'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
             'plainText': self.quickKeyPlainTextCheckBox.isChecked()
@@ -255,10 +253,10 @@ class QuickKeys:
         for k in ['deckName', 'modelName', 'regularKey']:
             if not quick_key[k]:
                 showInfo(
-                    """
-                        Please complete all settings. Destination deck,
-                        note type, and a letter or number for the key 
-                        combination are required."""
+                    """\
+Please complete all settings. Destination deck, \
+note type, and a letter or number for the key \
+combination are required."""
                 )
                 return
 
