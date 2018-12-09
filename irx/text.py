@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 from collections import defaultdict
+import os
 import urllib2
 import re
 import time
@@ -12,7 +13,7 @@ from cStringIO import StringIO
 from PyQt4.QtGui import (
     QApplication, QImage, QAbstractItemView, QDialog, QDialogButtonBox, QPixmap,
     QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QVBoxLayout, QLabel,
-    QBrush, QColor
+    QBrush, QColor, QMessageBox
 )
 from PyQt4.QtWebKit import QWebPage
 from PyQt4.QtCore import Qt, QBuffer
@@ -200,6 +201,28 @@ class TextManager:
                             item
                         )
                     self.image_list_widget.update()
+            elif key == "r":
+                selected = self.image_list_widget.selectedItems()
+                if selected and len(selected) == 1:
+                    selected_image = selected[0].data(Qt.UserRole)
+                    filename = selected_image['src']
+                    image_data, _, image_url = self._grab_images_from_clipboard()
+                    if len(image_data) == 1:
+                        conf_box = QMessageBox()
+                        conf_box.setText("Do you want to replace all instances of this image with the new one from the clipboard?")
+                        conf_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                        conf_box.setDefaultButton(QMessageBox.Yes)
+                        ret = conf_box.exec_()
+                        if ret: 
+                            self._save_image_to_col(image_data[0], filename, replace=True)
+                            selected_image["url"] = image_url[0] if image_url else None
+                            selected[0].setData(Qt.UserRole, selected_image)
+                            self.image_list_widget.update()
+                            update_label()
+                    else:
+                        showInfo("There were multiple images on the clipboard, should be only 1.") 
+                else:
+                    showInfo("Can only edit 1 image at a time")
             else:
                 return _orig(evt)
 
@@ -361,12 +384,80 @@ class TextManager:
         else:
             remove_src = False
 
-        mime_data = QApplication.clipboard().mimeData()
+        image_data, captions, image_urls = self._grab_images_from_clipboard()
 
+        images_templ = ""
+        for index, image in enumerate(image_data):
+            try:
+                caption, ret = getText(
+                    "Add a caption for the image",
+                    title="Extract Image",
+                    default=captions[index]
+                ) if not skip_captions else (captions[index], 1)
+            except IndexError:
+                caption, ret = getText(
+                    "Add a caption for the image",
+                    title="Extract Image",
+                    default=pretty_date()
+                ) if not skip_captions else (pretty_date(), 1)
+            if ret == 1:
+                filepath = self._save_image_to_col(image, caption[:50])
+                images_templ += self._templ_image(filepath, caption, image_urls[index] if image_urls else None)
+        if images_templ:
+            current_card = mw.reviewer.card
+            current_note = current_card.note()
+
+            prev_images_field = getField(
+                current_note, self.settings["imagesField"]
+            )
+            new_images_field = prev_images_field + images_templ
+
+            setField(
+                current_note, self.settings["imagesField"], new_images_field
+            )
+            current_note.flush()
+            mw.reset()
+
+    def _templ_image(self, src, caption, url=None):
+        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'>"
+        template += "</a><a href='{url}'>" if url else "</a>"
+        template += "<span class='irx-caption'>{caption}</span>"
+        template += "</a></div>" if url else "</div>"
+        return template.format(id=timestamp_id(), src=src, url=url, caption=caption) if url else template.format(id=timestamp_id(), src=src, caption=caption)
+
+
+    def _save_image_to_col(self, image_data, filename, quality=65, replace=False):
+        media = mw.col.media
+        filepath = media.stripIllegal(filename)
+        if exists(join(media.dir(), filepath)) and replace:
+            replacement_worked = False
+            temp_filename = join(media.dir(), filename +"__IRXTEMP")
+            os.rename(join(media.dir(), filepath), temp_filename)
+        try: 
+            media.writeData(filepath, image_data)
+            replacement_worked = True
+        except TypeError:
+            buf = QBuffer()
+            buf.open(QBuffer.ReadWrite)
+            filepath += ".png" if filepath[-4:] != ".png" and not replace else ""
+            image_data.save(buf, "PNG", quality=quality)
+            media.writeData(filepath, buf.data())
+            replacement_worked = True
+        if replace:
+            if replacement_worked:
+                os.remove(temp_filename)
+            else:
+                os.rename(temp_filename, temp_filename[:-9])
+        return filepath
+
+
+    def _grab_images_from_clipboard(self):
+        mime_data = QApplication.clipboard().mimeData()
+        image_data = []
+        image_urls = []
+        image_captions = [t for t in mime_data.text().split("\n") if t]
         image = mime_data.imageData()
         if not image:
-            images = []
-            image_urls = []
             soup = bs(mime_data.html())
             for media_path in [img.get('src') for img in soup.findAll('img')]:
                 img_data = None
@@ -387,67 +478,16 @@ class TextManager:
                         )
                         continue
                 if img_data:
-                    images.append(img_data)
+                    image_data.append(img_data)
                     image_urls.append(media_path)
-            if not images:
+            if not image_data:
                 showInfo("Could not find any images to extract")
                 return
         else:
-            images = [image]
+            image_data = [image]
+        
+        return image_data, image_captions, image_urls
 
-        texts = [t for t in mime_data.text().split("\n") if t]
-        images_templ = ""
-        for index, image in enumerate(images):
-            try:
-                caption, ret = getText(
-                    "Add a caption for the image",
-                    title="Extract Image",
-                    default=texts[index]
-                ) if not skip_captions else (texts[index], 1)
-            except IndexError:
-                caption, ret = getText(
-                    "Add a caption for the image",
-                    title="Extract Image",
-                    default=pretty_date()
-                ) if not skip_captions else (pretty_date(), 1)
-            if ret == 1:
-                media = mw.col.media
-                filename = media.stripIllegal(caption[:50])
-                while exists(join(media.dir(), filename)):
-                    filename += "_1"
-                try:
-                    media.writeData(filename, image)
-                    images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><a href='{url}'><span class='irx-caption'>{caption}</span></a></div>".format(
-                        id=timestamp_id(),
-                        url=image_urls[index],
-                        src=filename,
-                        caption=caption
-                    )
-                except TypeError:
-                    buf = QBuffer()
-                    buf.open(QBuffer.ReadWrite)
-                    filename += ".png"
-                    image.save(buf, "PNG", quality=65)
-                    media.writeData(filename, buf.data())
-                    images_templ += "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>".format(
-                        id=timestamp_id(),
-                        src=filename,
-                        caption=caption
-                    )
-        if images_templ:
-            current_card = mw.reviewer.card
-            current_note = current_card.note()
-
-            prev_images_field = getField(
-                current_note, self.settings["imagesField"]
-            )
-            new_images_field = prev_images_field + images_templ
-
-            setField(
-                current_note, self.settings["imagesField"], new_images_field
-            )
-            current_note.flush()
-            mw.reset()
 
     def _editExtract(self, note, did, model_name):
         def on_add():

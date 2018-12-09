@@ -2,6 +2,7 @@ var imagesSidebar = true;
 var stylesVisible = true;
 var highlightsVisible = true;
 var removedVisible = false;
+var lastImageUrl = "";
 
 function markRange(identifier, attributes) {
     var range, sel = window.getSelection();
@@ -123,6 +124,7 @@ function execCommandOnRange(identifiers, attrs, clear) {
         }
     }
 }
+
 
 function rangeIdsWithAttr(irx_attr) {
     var xPathQuery = '//*[@' + irx_attr + ']';
