@@ -125,7 +125,6 @@ function execCommandOnRange(identifiers, attrs, clear) {
     }
 }
 
-
 function rangeIdsWithAttr(irx_attr) {
     var xPathQuery = '//*[@' + irx_attr + ']';
     var xPathResult = document.evaluate(xPathQuery, document, null, XPathResult.ANY_TYPE, null);
