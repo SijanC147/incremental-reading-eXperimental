@@ -78,10 +78,23 @@ function execCommandOnRange(identifiers, attrs, clear) {
             }
 
             if (startNode.hasAttribute("irx-remove")) {
+                docImgs = document.getElementsByTagName('img');
+                selImgs = Array();
+                for (i = 0; i < docImgs.length; i++) {
+                    if (sel.containsNode(docImgs.item(i))) {
+                        selImgs.push(docImgs.item(i));
+                    }
+                }
                 if (removedVisible) {
                     document.execCommand("hiliteColor", false, "grey");
                     document.execCommand("foreColor", false, "white");
+                    for (var im in selImgs) {
+                        selImgs[im].setAttribute("style", "width: 30%; border: 5px solid grey;");
+                    }
                 } else {
+                    for (var im in selImgs) {
+                        selImgs[im].setAttribute("style", "display: initial;");
+                    }
                     document.execCommand("hiliteColor", false, "black");
                     document.execCommand("foreColor", false, "white");
                 }

@@ -304,7 +304,6 @@ def LinkHandler(self, evt, _old):
             previous_card = self.card
             note = mw.col.getNote(note_id)
             mw.reviewer.card = note.cards()[0]
-            editing = mw.onEditCurrent()
             self.card = previous_card
         except:
             tooltip("Could not find note, possibly deleted.")
