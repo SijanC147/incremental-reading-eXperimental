@@ -150,6 +150,7 @@ def addMenuItem(menuName, text, function, keys=None):
 def addShortcut(function, keys):
     shortcut = QShortcut(QKeySequence(keys), mw)
     shortcut.activated.connect(function)
+    return shortcut
 
 
 def getField(note, fieldName):

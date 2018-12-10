@@ -3,11 +3,12 @@
 from __future__ import unicode_literals
 
 from PyQt4.QtCore import QPoint, Qt
+from PyQt4.QtGui import QShortcut, QKeySequence
 
 from anki.hooks import wrap
 from aqt import mw
 
-from irx.util import addMenuItem, addShortcut, isIrxCard, viewingIrxText
+from irx.util import addMenuItem, addShortcut, isIrxCard, viewingIrxText, db_log
 
 
 class ViewManager():
@@ -87,6 +88,8 @@ class ViewManager():
         movementSize = pageHeight * self.settings['pageScrollFactor']
         pageBottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
         newPos = min(pageBottom, (currentPos + movementSize))
+        reached_end = newPos == pageBottom or pageBottom == 0
+        mw.readingManager.space_scroll.setEnabled(not reached_end)
         self.setScroll(newPos)
 
     def lineUp(self):

@@ -1,7 +1,7 @@
 var imagesSidebar = true;
 var stylesVisible = true;
 var highlightsVisible = true;
-var removedVisible = false;
+var removedVisible = true;
 var lastImageUrl = "";
 
 function markRange(identifier, attributes) {
@@ -26,6 +26,9 @@ function markRange(identifier, attributes) {
         range.insertNode(startNode);
         var endNode = document.createElement('span');
         endNode.setAttribute('id', ('ex' + identifier));
+        if (attributes.hasOwnProperty("remove")) {
+            endNode.setAttribute('irx-remove', "");
+        }
         range.collapse(false);
         range.insertNode(endNode);
         range.setStartAfter(startNode);
@@ -100,23 +103,75 @@ function execCommandOnRange(identifiers, attrs, clear) {
                     document.execCommand("foreColor", false, "white");
                 }
             } else {
-                if (startNode.hasAttribute("irx-link")) {
-                    var irx_link = startNode.getAttribute("irx-link");
-                    document.execCommand("createLink", false, "irxnid:" + irx_link);
+                originalRange = sel.getRangeAt(0);
+                var newRange = originalRange.cloneRange();
+                fragment = originalRange.cloneContents();
+                fragRemSpans = fragment.querySelectorAll("span[irx-remove][id^='sx'],span[irx-remove][id^='ex']");
+                selRemSpans = Array();
+                for (var i = 0; i < fragRemSpans.length; i++) {
+                    selRemSpans.push(document.getElementById(fragRemSpans[i].id))
                 }
-                if (startNode.hasAttribute("irx-styles") & stylesVisible) {
-                    var irx_styles = startNode.getAttribute("irx-styles").split(" ");
-                    for (var s in irx_styles) {
-                        document.execCommand(irx_styles[s], true, true);
+                var targetRanges = Array();
+                var cnt = null;
+                for (var i = 0; i < selRemSpans.length; i++) {
+                    cnt = cnt == null ? 0 : cnt;
+                    if (selRemSpans[i].id.indexOf("ex") == 0) {
+                        newRange.setStartAfter(selRemSpans[i]);
+                        cnt = Math.max(0, cnt - 1);
+                    } else if (selRemSpans[i].id.indexOf("sx") == 0) {
+                        if (cnt == 0) {
+                            newRange.setEndBefore(selRemSpans[i]);
+                            targetRanges.push(newRange);
+                            newRange = originalRange.cloneRange();
+                        }
+                        cnt = cnt + 1;
                     }
                 }
-                if (startNode.hasAttribute("irx-bg") & highlightsVisible) {
-                    var irx_bg = startNode.getAttribute("irx-bg");
-                    document.execCommand("hiliteColor", false, irx_bg);
+                if (cnt == 0) {
+                    targetRanges.push(newRange);
                 }
-                if (startNode.hasAttribute("irx-fg") & highlightsVisible) {
-                    var irx_fg = startNode.getAttribute("irx-fg");
-                    document.execCommand("foreColor", false, irx_fg);
+                if (targetRanges.length > 0) {
+                    for (var i in targetRanges) {
+                        sel.removeAllRanges();
+                        sel.addRange(targetRanges[i]);
+                        if (startNode.hasAttribute("irx-link")) {
+                            var irx_link = startNode.getAttribute("irx-link");
+                            document.execCommand("createLink", false, "irxnid:" + irx_link);
+                        }
+                        if (startNode.hasAttribute("irx-styles") & stylesVisible) {
+                            var irx_styles = startNode.getAttribute("irx-styles").split(" ");
+                            for (var s in irx_styles) {
+                                document.execCommand(irx_styles[s], true, true);
+                            }
+                        }
+                        if (startNode.hasAttribute("irx-bg") & highlightsVisible) {
+                            var irx_bg = startNode.getAttribute("irx-bg");
+                            document.execCommand("hiliteColor", false, irx_bg);
+                        }
+                        if (startNode.hasAttribute("irx-fg") & highlightsVisible) {
+                            var irx_fg = startNode.getAttribute("irx-fg");
+                            document.execCommand("foreColor", false, irx_fg);
+                        }
+                    }
+                } else {
+                    if (startNode.hasAttribute("irx-link")) {
+                        var irx_link = startNode.getAttribute("irx-link");
+                        document.execCommand("createLink", false, "irxnid:" + irx_link);
+                    }
+                    if (startNode.hasAttribute("irx-styles") & stylesVisible) {
+                        var irx_styles = startNode.getAttribute("irx-styles").split(" ");
+                        for (var s in irx_styles) {
+                            document.execCommand(irx_styles[s], true, true);
+                        }
+                    }
+                    if (startNode.hasAttribute("irx-bg") & highlightsVisible) {
+                        var irx_bg = startNode.getAttribute("irx-bg");
+                        document.execCommand("hiliteColor", false, irx_bg);
+                    }
+                    if (startNode.hasAttribute("irx-fg") & highlightsVisible) {
+                        var irx_fg = startNode.getAttribute("irx-fg");
+                        document.execCommand("foreColor", false, irx_fg);
+                    }
                 }
             }
             document.designMode = "off";

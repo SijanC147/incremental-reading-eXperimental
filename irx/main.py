@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import re
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QShortcut, QKeySequence
 from PyQt4.QtWebKit import QWebPage
 
 from anki import notes
@@ -35,10 +35,12 @@ class ReadingManager:
     def __init__(self):
         self.controlsLoaded = False
         self.quickKeyActions = []
+        self.irx_specific_shortcuts = []
 
         addHook("profileLoaded", self.onProfileLoaded)
         addHook("reset", self.restore_view)
         addHook("showQuestion", self.restore_view)
+        addHook("reviewCleanup", lambda: self.toggle_irx_controls(False))
 
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager()
@@ -62,14 +64,45 @@ class ReadingManager:
             addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
             addMenuItem("IR3X", "About", showAbout)
-            for keys, action in self.settings["irx_controls"].items():
-                if len(keys) > 1 and keys.find("+") >= 0:
-                    addShortcut(action, keys)
+            self.setup_irx_controls()
             self.controlsLoaded = True
-        self.quickKeys.refresh_menu_items()
 
+        self.quickKeys.refresh_menu_items()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
+
+    def setup_irx_controls(self):
+        for key_seq, action in self.settings["irx_controls"].items():
+            if len(key_seq) > 1 and key_seq.find("+") > 0:
+                shortcut = addShortcut(action, key_seq)
+                self.irx_specific_shortcuts.append(shortcut)
+        self.controls_state = False
+        self.space_scroll = QShortcut(QKeySequence("space"), mw)
+        self.space_scroll.activated.connect(lambda: mw.viewManager.pageDown())
+        self.space_scroll.setEnabled(False)
+        self.toggle_irx_controls(self.controls_state, notify=False)
+
+    def next_irx_card(self):
+        if viewingIrxText():
+            if mw.reviewer.state == "question":
+                mw.reviewer._showAnswerHack()
+            elif mw.reviewer.state == "answer":
+                mw.reviewer._answerCard(mw.reviewer._defaultEase())
+
+    def toggle_irx_controls(self, state=None, notify=True):
+        for irx_shortcut in self.irx_specific_shortcuts:
+            irx_shortcut.setEnabled(state or not irx_shortcut.isEnabled())
+        if notify and state != self.controls_state:
+            tooltip(
+                "<b>IR3X {}</b>".format(
+                    "<font color='green'>ON</font>"
+                    if state else "<font color='red'>OFF</font>"
+                )
+            )
+        self.controls_state = state
+
+    def toggle_space_scroll(self, state=None):
+        self.space_scroll.setEnabled(state or not self.space_scroll.isEnabled())
 
     def monkey_patch_other_addons(self):
         Reviewer._answerButtonList = wrap(
@@ -141,6 +174,8 @@ class ReadingManager:
 
     def restore_view(self):
         if viewingIrxText():
+            self.toggle_irx_controls(True)
+            self.toggle_space_scroll(True)
             cid = str(mw.reviewer.card.id)
             if cid not in self.settings["zoom"]:
                 self.settings["zoom"][cid] = 1
@@ -155,6 +190,12 @@ class ReadingManager:
             note_images = getField(note, self.settings["imagesField"])
             if not note_images:
                 mw.web.eval('toggleImagesSidebar(false);')
+            page_bottom = mw.web.page().mainFrame().scrollBarMaximum(
+                Qt.Vertical
+            )
+            card_pos = self.settings['scroll'][str(cid)]
+            if page_bottom == card_pos or page_bottom == 0:
+                self.toggle_space_scroll(False)
 
     def init_javascript(self):
         mw.web.page().mainFrame().addToJavaScriptWindowObject(
@@ -172,8 +213,6 @@ class ReadingManager:
     def quick_add(self, quick_key):
         if not viewingIrxText() and mw.web.selectedText():
             return
-
-        mw.web.eval('toggleRemoved(false);')
 
         if mw.web.selectedText():
             mw.web.triggerPageAction(QWebPage.Copy)
@@ -220,7 +259,6 @@ class ReadingManager:
         link_to_note = self.textManager._editExtract(
             new_note, target_deck["id"], quick_key["modelName"]
         ) if quick_key["editExtract"] else True
-        db_log(link_to_note)
 
         if link_to_note:
             did = mw.col.decks.byName(target_deck_name)["id"]
@@ -301,6 +339,7 @@ def LinkHandler(self, evt, _old):
             previous_card = self.card
             note = mw.col.getNote(note_id)
             mw.reviewer.card = note.cards()[0]
+            editing = mw.onEditCurrent()
             self.card = previous_card
         except:
             tooltip("Could not find note, possibly deleted.")
@@ -311,42 +350,14 @@ def LinkHandler(self, evt, _old):
 
 
 def keyHandler(self, evt, _old):
-    handled = False
-    if viewingIrxText():
-        special_keys = {
-            "up": Qt.Key_Up,
-            "down": Qt.Key_Down,
-            "left": Qt.Key_Left,
-            "right": Qt.Key_Right,
-            "enter": Qt.Key_Enter,
-            "return": Qt.Key_Return,
-            "esc": Qt.Key_Escape,
-            "pgup": Qt.Key_PageUp,
-            "pgdown": Qt.Key_PageDown,
-            "home": Qt.Key_Home,
-            "end": Qt.Key_End,
-            "tab": Qt.Key_Tab,
-            "space": Qt.Key_Space,
-        }
-        custom_hotkeys = {
-            "enter": self._defaultEase,
-            "return": self._defaultEase,
-            "space": self._defaultEase,
-        }
-        for key, val in mw.readingManager.settings["irx_controls"].items():
-            if len(key) == 1:
-                custom_hotkeys[key.lower()] = val
-            elif key.lower() in special_keys.keys():
-                custom_hotkeys[str(special_keys[key.lower()])] = val
-        key = unicode(evt.text()).lower()
-        if key in custom_hotkeys.keys():
-            custom_hotkeys[key]()
-            handled = True
-        elif str(evt.key()) in custom_hotkeys.keys():
-            custom_hotkeys[str(evt.key())]()
-            handled = True
-
-    return handled or _old(self, evt)
+    irx_action = {
+        k.lower(): v
+        for k, v in mw.readingManager.settings["irx_controls"].items()
+        if len(k) == 1
+    }.get(unicode(evt.text()).lower()) if viewingIrxText() else False
+    if irx_action:
+        irx_action()
+    return bool(irx_action) or _old(self, evt)
 
 
 def defaultEase(self, _old):
