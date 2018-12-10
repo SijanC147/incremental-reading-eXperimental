@@ -58,6 +58,7 @@ REVIEWER_FUNCTIONS = {
     "line down": lambda: mw.viewManager.lineDown(),
     "page up": lambda: mw.viewManager.pageUp(),
     "page down": lambda: mw.viewManager.pageDown(),
+    "next card": lambda: mw.readingManager.next_irx_card(),
 }
 
 

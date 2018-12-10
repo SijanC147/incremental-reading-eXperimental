@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+
 from collections import defaultdict
 import os
 import urllib2
@@ -102,7 +103,8 @@ class TextManager:
                         "src":
                             div.findChild('img').get('src'),
                         "url":
-                            div.findAll('a')[1].get('href') if len(div.findAll('a')) == 2 else None,
+                            div.findAll('a')[1].get('href')
+                            if len(div.findAll('a')) == 2 else None,
                         "html":
                             str(div.extract())
                     }
@@ -213,21 +215,31 @@ class TextManager:
                 if selected and len(selected) == 1:
                     selected_image = selected[0].data(Qt.UserRole)
                     filename = selected_image['src']
-                    image_data, _, image_url = self._grab_images_from_clipboard()
+                    image_data, _, image_url = self._grab_images_from_clipboard(
+                    )
                     if len(image_data) == 1:
                         conf_box = QMessageBox()
-                        conf_box.setText("Do you want to replace all instances of this image with the new one from the clipboard?")
-                        conf_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                        conf_box.setText(
+                            "Do you want to replace all instances of this image with the new one from the clipboard?"
+                        )
+                        conf_box.setStandardButtons(
+                            QMessageBox.Yes | QMessageBox.No
+                        )
                         conf_box.setDefaultButton(QMessageBox.Yes)
                         ret = conf_box.exec_()
-                        if ret: 
-                            self._save_image_to_col(image_data[0], filename, replace=True)
-                            selected_image["url"] = image_url[0] if image_url else None
+                        if ret:
+                            self._save_image_to_col(
+                                image_data[0], filename, replace=True
+                            )
+                            selected_image[
+                                "url"] = image_url[0] if image_url else None
                             selected[0].setData(Qt.UserRole, selected_image)
                             self.image_list_widget.update()
                             update_label()
                     else:
-                        showInfo("There were multiple images on the clipboard, should be only 1.") 
+                        showInfo(
+                            "There were multiple images on the clipboard, should be only 1."
+                        )
                 else:
                     showInfo("Can only edit 1 image at a time")
             else:
@@ -263,8 +275,12 @@ class TextManager:
             images = [
                 "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><a href='{url}'><span class='irx-caption'>{caption}</span></a></div>"
                 .format(
-                    id=image["id"], src=image["src"], url=image['url'], caption=image["caption"]
-                ) if image['url'] else "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>"
+                    id=image["id"],
+                    src=image["src"],
+                    url=image['url'],
+                    caption=image["caption"]
+                ) if image['url'] else
+                "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>"
                 .format(
                     id=image["id"], src=image["src"], caption=image["caption"]
                 ) for image in [
@@ -277,10 +293,35 @@ class TextManager:
             note.flush()
             mw.reset()
 
-    def extract(self, also_edit=False, schedule_extract=None):
+    def _clean_extract_html(self, html):
+        cnt = None
+        content = "".join([unicode(c) for c in bs(html).find('span').contents])
+        soup = bs(content)
+        clean_html = ""
+        clean_start = 0
+        for rem_span in soup.findAll('span', {"irx-remove": ""}):
+            cnt = cnt or 0
+            span_str = unicode(rem_span.extract())
+            if rem_span.get("id")[:2] == "ex":
+                clean_start = content.find(span_str)+len(span_str)
+                cnt = max(0, cnt-1)
+            else:
+                if cnt == 0:
+                    clean_end = content.find(span_str)
+                    clean_content = content[clean_start:clean_end] 
+                    clean_html += clean_content + (" " if clean_content[:-1]!= " " else "")
+                cnt += 1
+        if cnt == 0:
+            clean_html += content[clean_start:]
+        return unicode(clean_html)
+
+
+    def extract(self, also_edit=False, schedule_extract=None, excl_removed=True):
         if not mw.web.selectedText():
             showInfo("Please select some text to extract.")
             return
+
+        selection = self._clean_extract_html(mw.web.selectedHtml()) if excl_removed else mw.web.selectedHtml()
 
         current_card = mw.reviewer.card
         current_note = current_card.note()
@@ -289,12 +330,10 @@ class TextManager:
         new_note = Note(mw.col, model)
         new_note.tags = current_note.tags
 
-        mw.web.triggerPageAction(QWebPage.Copy)
-        mime_data = QApplication.clipboard().mimeData()
         if self.settings["plainText"]:
-            text = mime_data.text()
+            text = bs(selection).text
         else:
-            text = mime_data.html()
+            text = selection 
             media_paths = re.findall(r"src=\"([^\"]+)", text)
             for path in media_paths:
                 media_name = normpath(basename(path))
@@ -364,7 +403,7 @@ class TextManager:
 
         image_data, captions, image_urls = self._grab_images_from_clipboard()
         if not image_data:
-            return 
+            return
 
         images_templ = ""
         for index, image in enumerate(image_data):
@@ -381,21 +420,35 @@ class TextManager:
                     default=pretty_date()
                 ) if not skip_captions else (pretty_date(), 1)
             if ret == 1:
-                filepath, identifier = self._save_image_to_col(image, caption[:50])
-                images_templ += self._templ_image(filepath, caption, identifier=identifier, url=image_urls[index] if image_urls else None)
+                filepath, identifier = self._save_image_to_col(
+                    image, caption[:50]
+                )
+                images_templ += self._templ_image(
+                    filepath,
+                    caption,
+                    identifier=identifier,
+                    url=image_urls[index] if image_urls else None
+                )
         if images_templ:
             current_card = mw.reviewer.card
             current_note = current_card.note()
-            prev_images_field = getField(current_note, self.settings["imagesField"])
+            prev_images_field = getField(
+                current_note, self.settings["imagesField"]
+            )
             images_soup = bs(prev_images_field)
-            current_image_ids = [d.get('id') for d in images_soup.findAll('div', {'class': "irx-img-container"})]
+            current_image_ids = [
+                d.get('id') for d in images_soup.
+                findAll('div', {'class': "irx-img-container"})
+            ]
             if identifier not in current_image_ids:
-                if remove_src: 
-                    self.remove() # this automatically takes care of saving
+                if remove_src:
+                    self.remove()  # this automatically takes care of saving
                 else:
                     self.save()
                 new_images_field = prev_images_field + images_templ
-                setField(current_note, self.settings["imagesField"], new_images_field)
+                setField(
+                    current_note, self.settings["imagesField"], new_images_field
+                )
             else:
                 tooltip("Image has already been extracted.")
             current_note.flush()
@@ -410,9 +463,16 @@ class TextManager:
             current_note = mw.reviewer.card.note()
             note_linked = mw.col.getNote(linked_nid) if linked_nid else None
             action = {
-                "type": "irx-extract",
-                "nid": linked_nid,
-                "title": (getField(note_linked, self.settings["titleField"]) if note_linked.model()["name"] == self.settings["modelName"] else None)
+                "type":
+                    "irx-extract",
+                "nid":
+                    linked_nid,
+                "title":
+                    (
+                        getField(note_linked, self.settings["titleField"])
+                        if note_linked.model()["name"] == self.
+                        settings["modelName"] else None
+                    )
             } if note_linked else {}
             self.history[current_note.id].append(
                 {
@@ -453,7 +513,9 @@ class TextManager:
             try:
                 extract = mw.col.getNote(extract_nid)
                 try:
-                    extract_title = getField(extract, self.settings["titleField"])
+                    extract_title = getField(
+                        extract, self.settings["titleField"]
+                    )
                 except KeyError:
                     extract_title = extract_nid
                 mw.col.remNotes([extract_nid])
@@ -482,16 +544,17 @@ class TextManager:
         template += "</a></div>" if url else "</div>"
         return template.format(**content)
 
-
-    def _save_image_to_col(self, image_data, filename, quality=85, replace=False):
+    def _save_image_to_col(
+        self, image_data, filename, quality=85, replace=False
+    ):
         media = mw.col.media
         identifier = None
         filepath = media.stripIllegal(filename)
         if exists(join(media.dir(), filepath)) and replace:
             replacement_worked = False
-            temp_filename = join(media.dir(), filename +"__IRXTEMP")
+            temp_filename = join(media.dir(), filename + "__IRXTEMP")
             os.rename(join(media.dir(), filepath), temp_filename)
-        try: 
+        try:
             identifier = checksum(image_data)
             media.writeData(filepath, image_data)
             replacement_worked = True
@@ -510,7 +573,6 @@ class TextManager:
                 os.rename(temp_filename, temp_filename[:-9])
         return filepath, identifier
 
-
     def _grab_images_from_clipboard(self):
         mime_data = QApplication.clipboard().mimeData()
         image_data = []
@@ -520,10 +582,20 @@ class TextManager:
         if not image:
             soup = bs(mime_data.html())
             for img in soup.findAll('img'):
-                parent = img.findParent('a', {'href': re.compile(r"wikipedia\.org/wiki/File:", flags=re.IGNORECASE)})
+                parent = img.findParent(
+                    'a', {
+                        'href':
+                            re.compile(
+                                r"wikipedia\.org/wiki/File:",
+                                flags=re.IGNORECASE
+                            )
+                    }
+                )
                 if parent:
                     wiki_soup = bs(urllib2.urlopen(parent.get('href')))
-                    media_path = wiki_soup.findAll('div', attrs={"id": "file"})[0].findChild('a').get('href')
+                    media_path = wiki_soup.findAll(
+                        'div', attrs={"id": "file"}
+                    )[0].findChild('a').get('href')
                 else:
                     media_path = img.get('src')
                 img_data = None
@@ -550,9 +622,8 @@ class TextManager:
                 showInfo("Could not find any images to extract")
         else:
             image_data = [image]
-        
-        return image_data, image_captions, image_urls
 
+        return image_data, image_captions, image_urls
 
     def _editExtract(self, note, did, model_name):
         def on_add():
@@ -595,7 +666,6 @@ class TextManager:
             if version_ok:
                 return candidate_version
             next_version += 1
-
 
     def _write_history(self):
         pickle.dump(

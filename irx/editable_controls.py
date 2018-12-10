@@ -26,7 +26,8 @@ REVIEWER_CONTROLS = {
     "line up": "Up",
     "line down": "Down",
     "page up": "PgUp",
-    "page down": "PgDown"
+    "page down": "PgDown",
+    "next card": "Shift+Space"
 }
 
 IMAGE_MANAGER_CONTROLS = {
