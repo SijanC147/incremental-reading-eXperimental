@@ -202,7 +202,12 @@ class TextManager:
                             item
                         )
                     self.image_list_widget.update()
-            elif key == "r":
+            # This does not work yet. The image is replaced but can't get it to update the view.
+            # One solution would be to actually save the new image under a new name
+            # and go through all IR3X notes and replace the file names
+            # or make a second copy of the replacement for the current note to update, then delete when
+            # it is answered, there are options, but this is not taht imperative right now
+            elif key == "WIP":
                 selected = self.image_list_widget.selectedItems()
                 if selected and len(selected) == 1:
                     selected_image = selected[0].data(Qt.UserRole)
@@ -332,7 +337,7 @@ class TextManager:
         else:
             setField(
                 new_note, self.settings["titleField"],
-                self.next_version_number(current_note)
+                self._next_version_number(current_note)
             )
             highlight = True
 
@@ -350,36 +355,7 @@ class TextManager:
             elif schedule_extract == 2:
                 self.linkNote(new_note, "later")
 
-    def next_version_number(self, parent_note):
-        parent_version = re.match(
-            r"(^[0-9\.]+)", getField(parent_note, self.settings["titleField"])
-        )
-        if parent_version:
-            parent_version = parent_version.group()
-        else:
-            parent_version = "1."
-        siblings = irx_siblings(parent_note)
-        sibling_count = len(siblings)
-        next_version = sibling_count + 1
-        version_ok = False
-        while not (version_ok):
-            candidate_version = "{0}{1}.".format(
-                parent_version, str(next_version)
-            )
-            sibling_versions = [
-                getField(sibling,
-                         self.settings["titleField"])[:len(candidate_version)]
-                for sibling in siblings
-            ]
-            version_ok = candidate_version not in sibling_versions
-            if version_ok:
-                return candidate_version
-            next_version += 1
-
     def extract_image(self, remove_src=False, skip_captions=False):
-        if mw.web.selectedText() and remove_src:
-            mw.web.triggerPageAction(QWebPage.Copy)
-            self.remove()
         if mw.web.selectedText():
             mw.web.triggerPageAction(QWebPage.Copy)
         else:
@@ -407,6 +383,10 @@ class TextManager:
                 filepath = self._save_image_to_col(image, caption[:50])
                 images_templ += self._templ_image(filepath, caption, image_urls[index] if image_urls else None)
         if images_templ:
+            if remove_src: 
+                self.remove() # this automatically takes care of saving
+            else:
+                self.save()
             current_card = mw.reviewer.card
             current_note = current_card.note()
 
@@ -420,6 +400,74 @@ class TextManager:
             )
             current_note.flush()
             mw.reset()
+
+    def save(self, linked_nid=None):
+        current_view = mw.web.page().mainFrame().toHtml()
+        soup = bs(current_view)
+        text_div = soup.find("div", {"class": "irx-text"})
+        images_div = soup.find("div", {"class": "irx-images"})
+        if text_div:
+            current_note = mw.reviewer.card.note()
+            note_linked = mw.col.getNote(linked_nid) if linked_nid else None
+            action = {
+                "type": "irx-extract",
+                "nid": linked_nid,
+                "title": (getField(note_linked, self.settings["titleField"]) if note_linked.model()["name"] == self.settings["modelName"] else None)
+            } if note_linked else {}
+            self.history[current_note.id].append(
+                {
+                    "text": current_note["Text"],
+                    "images": current_note["Images"],
+                    "action": action,
+                }
+            )
+            current_note["Text"] = "".join(
+                [
+                    unicode(c) for c in text_div.contents if
+                    not (isinstance(c, bs_tag) and c.get('class') == "irx-sep")
+                ]
+            )
+            images_content = "".join([unicode(c) for c in images_div.contents])
+            for src in re.findall(r"src=\"([^\"]+)", images_content):
+                images_content = images_content.replace(
+                    src, urllib2.unquote(src)
+                )
+            current_note["Images"] = images_content
+            current_note.flush()
+            self._write_history()
+
+    def undo(self):
+        current_note = mw.reviewer.card.note()
+        current_note_title = getField(current_note, "Title")
+        history = self.history.get(current_note.id)
+        if not history:
+            tooltip("No undo history for {}".format(current_note_title))
+            return
+
+        msg = "Undone"
+        save_data = self.history[current_note.id].pop()
+        self._write_history()
+        action = save_data.get("action")
+        if action and action["type"] == "irx-extract":
+            extract_nid = action["nid"]
+            try:
+                extract = mw.col.getNote(extract_nid)
+                try:
+                    extract_title = getField(extract, self.settings["titleField"])
+                except KeyError:
+                    extract_title = extract_nid
+                mw.col.remNotes([extract_nid])
+                mw.readingManager.scheduler.update_organizer()
+                msg += "<br/> Deleted note: {}".format(extract_title)
+            except TypeError:
+                msg += "<br/> Linked note [{}] no longer exists.".format(
+                    action["title"] or action["nid"]
+                )
+        current_note["Text"] = save_data["text"]
+        current_note["Images"] = save_data["images"]
+        current_note.flush()
+        mw.reset()
+        tooltip(msg)
 
     def _templ_image(self, src, caption, url=None):
         template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'>"
@@ -513,75 +561,34 @@ class TextManager:
         add_cards.modelChooser.models.setText(model_name)
         return True
 
-    def save(self, linked_nid=None):
-        current_view = mw.web.page().mainFrame().toHtml()
-        soup = bs(current_view)
-        text_div = soup.find("div", {"class": "irx-text"})
-        images_div = soup.find("div", {"class": "irx-images"})
-        if text_div:
-            current_note = mw.reviewer.card.note()
-            note_linked = mw.col.getNote(linked_nid) if linked_nid else None
-            action = {
-                "type": "irx-extract",
-                "nid": linked_nid,
-                "title": (getField(note_linked, self.settings["titleField"]) if note_linked.model()["name"] == self.settings["modelName"] else None)
-            } if note_linked else {}
-            self.history[current_note.id].append(
-                {
-                    "text": current_note["Text"],
-                    "images": current_note["Images"],
-                    "action": action,
-                }
+    def _next_version_number(self, parent_note):
+        parent_version = re.match(
+            r"(^[0-9\.]+)", getField(parent_note, self.settings["titleField"])
+        )
+        if parent_version:
+            parent_version = parent_version.group()
+        else:
+            parent_version = "1."
+        siblings = irx_siblings(parent_note)
+        sibling_count = len(siblings)
+        next_version = sibling_count + 1
+        version_ok = False
+        while not (version_ok):
+            candidate_version = "{0}{1}.".format(
+                parent_version, str(next_version)
             )
-            current_note["Text"] = "".join(
-                [
-                    unicode(c) for c in text_div.contents if
-                    not (isinstance(c, bs_tag) and c.get('class') == "irx-sep")
-                ]
-            )
-            images_content = "".join([unicode(c) for c in images_div.contents])
-            for src in re.findall(r"src=\"([^\"]+)", images_content):
-                images_content = images_content.replace(
-                    src, urllib2.unquote(src)
-                )
-            current_note["Images"] = images_content
-            current_note.flush()
-            self.write_history()
+            sibling_versions = [
+                getField(sibling,
+                         self.settings["titleField"])[:len(candidate_version)]
+                for sibling in siblings
+            ]
+            version_ok = candidate_version not in sibling_versions
+            if version_ok:
+                return candidate_version
+            next_version += 1
 
-    def undo(self):
-        current_note = mw.reviewer.card.note()
-        current_note_title = getField(current_note, "Title")
-        history = self.history.get(current_note.id)
-        if not history:
-            tooltip("No undo history for {}".format(current_note_title))
-            return
 
-        msg = "Undone"
-        save_data = self.history[current_note.id].pop()
-        self.write_history()
-        action = save_data.get("action")
-        if action and action["type"] == "irx-extract":
-            extract_nid = action["nid"]
-            try:
-                extract = mw.col.getNote(extract_nid)
-                try:
-                    extract_title = getField(extract, self.settings["titleField"])
-                except KeyError:
-                    extract_title = extract_nid
-                mw.col.remNotes([extract_nid])
-                mw.readingManager.scheduler.update_organizer()
-                msg += "<br/> Deleted note: {}".format(extract_title)
-            except TypeError:
-                msg += "<br/> Linked note [{}] no longer exists.".format(
-                    action["title"] or action["nid"]
-                )
-        current_note["Text"] = save_data["text"]
-        current_note["Images"] = save_data["images"]
-        current_note.flush()
-        mw.reset()
-        tooltip(msg)
-
-    def write_history(self):
+    def _write_history(self):
         pickle.dump(
             self.history, open(self.history_path, "wb"), pickle.HIGHEST_PROTOCOL
         )

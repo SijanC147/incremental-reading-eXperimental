@@ -173,12 +173,9 @@ class ReadingManager:
         if not viewingIrxText() and mw.web.selectedText():
             return
 
-        has_selection = False
-        selected_text = ""
         mw.web.eval('toggleRemoved(false);')
 
         if mw.web.selectedText():
-            has_selection = True
             mw.web.triggerPageAction(QWebPage.Copy)
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
