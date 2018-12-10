@@ -20,6 +20,7 @@ from PyQt4.QtWebKit import QWebPage
 from PyQt4.QtCore import Qt, QBuffer
 
 from anki.notes import Note
+from anki.utils import checksum
 from aqt import mw
 from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
@@ -380,24 +381,23 @@ class TextManager:
                     default=pretty_date()
                 ) if not skip_captions else (pretty_date(), 1)
             if ret == 1:
-                filepath = self._save_image_to_col(image, caption[:50])
-                images_templ += self._templ_image(filepath, caption, image_urls[index] if image_urls else None)
+                filepath, identifier = self._save_image_to_col(image, caption[:50])
+                images_templ += self._templ_image(filepath, caption, identifier=identifier, url=image_urls[index] if image_urls else None)
         if images_templ:
-            if remove_src: 
-                self.remove() # this automatically takes care of saving
-            else:
-                self.save()
             current_card = mw.reviewer.card
             current_note = current_card.note()
-
-            prev_images_field = getField(
-                current_note, self.settings["imagesField"]
-            )
-            new_images_field = prev_images_field + images_templ
-
-            setField(
-                current_note, self.settings["imagesField"], new_images_field
-            )
+            prev_images_field = getField(current_note, self.settings["imagesField"])
+            images_soup = bs(prev_images_field)
+            current_image_ids = [d.get('id') for d in images_soup.findAll('div', {'class': "irx-img-container"})]
+            if identifier not in current_image_ids:
+                if remove_src: 
+                    self.remove() # this automatically takes care of saving
+                else:
+                    self.save()
+                new_images_field = prev_images_field + images_templ
+                setField(current_note, self.settings["imagesField"], new_images_field)
+            else:
+                tooltip("Image has already been extracted.")
             current_note.flush()
             mw.reset()
 
@@ -469,22 +469,30 @@ class TextManager:
         mw.reset()
         tooltip(msg)
 
-    def _templ_image(self, src, caption, url=None):
+    def _templ_image(self, src, caption, identifier=None, url=None):
+        content = {
+            "id": identifier or timestamp_id(),
+            "src": src,
+            "caption": caption,
+            "url": url,
+        }
         template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'>"
         template += "</a><a href='{url}'>" if url else "</a>"
         template += "<span class='irx-caption'>{caption}</span>"
         template += "</a></div>" if url else "</div>"
-        return template.format(id=timestamp_id(), src=src, url=url, caption=caption) if url else template.format(id=timestamp_id(), src=src, caption=caption)
+        return template.format(**content)
 
 
     def _save_image_to_col(self, image_data, filename, quality=85, replace=False):
         media = mw.col.media
+        identifier = None
         filepath = media.stripIllegal(filename)
         if exists(join(media.dir(), filepath)) and replace:
             replacement_worked = False
             temp_filename = join(media.dir(), filename +"__IRXTEMP")
             os.rename(join(media.dir(), filepath), temp_filename)
         try: 
+            identifier = checksum(image_data)
             media.writeData(filepath, image_data)
             replacement_worked = True
         except TypeError:
@@ -492,6 +500,7 @@ class TextManager:
             buf.open(QBuffer.ReadWrite)
             filepath += ".png" if filepath[-4:] != ".png" and not replace else ""
             image_data.save(buf, "PNG", quality=quality)
+            identifier = checksum(buf.data())
             media.writeData(filepath, buf.data())
             replacement_worked = True
         if replace:
@@ -499,7 +508,7 @@ class TextManager:
                 os.remove(temp_filename)
             else:
                 os.rename(temp_filename, temp_filename[:-9])
-        return filepath
+        return filepath, identifier
 
 
     def _grab_images_from_clipboard(self):
