@@ -313,8 +313,7 @@ class TextManager:
                 cnt += 1
         if cnt == 0:
             clean_html += content[clean_start:]
-        return unicode(clean_html)
-
+        return unicode(clean_html or content)
 
     def extract(self, also_edit=False, schedule_extract=None, excl_removed=True):
         if not mw.web.selectedText():
@@ -496,7 +495,7 @@ class TextManager:
             current_note.flush()
             self._write_history()
 
-    def undo(self):
+    def undo(self, show_tooltip=True):
         current_note = mw.reviewer.card.note()
         current_note_title = getField(current_note, "Title")
         history = self.history.get(current_note.id)
@@ -522,6 +521,7 @@ class TextManager:
                 mw.readingManager.scheduler.update_organizer()
                 msg += "<br/> Deleted note: {}".format(extract_title)
             except TypeError:
+                mw.col.db.execute("delete from cards where nid=?", extract_nid)
                 msg += "<br/> Linked note [{}] no longer exists.".format(
                     action["title"] or action["nid"]
                 )
@@ -529,7 +529,8 @@ class TextManager:
         current_note["Images"] = save_data["images"]
         current_note.flush()
         mw.reset()
-        tooltip(msg)
+        if show_tooltip:
+            tooltip(msg)
 
     def _templ_image(self, src, caption, identifier=None, url=None):
         content = {
@@ -626,12 +627,13 @@ class TextManager:
         return image_data, image_captions, image_urls
 
     def _editExtract(self, note, did, model_name):
+        undo_action = lambda: self.undo(show_tooltip=False)
         def on_add():
-            add_cards.rejected.disconnect(self.undo)
+            add_cards.rejected.disconnect(undo_action)
             add_cards.reject()
 
         add_cards = AddCards(mw)
-        add_cards.rejected.connect(self.undo)
+        add_cards.rejected.connect(undo_action)
         add_cards.addButton.clicked.connect(on_add)
         add_cards.editor.setNote(note)
         deck_name = mw.col.decks.get(did)["name"]

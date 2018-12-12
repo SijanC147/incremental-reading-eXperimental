@@ -122,16 +122,16 @@ class ReadingManager:
 
         original_undo = mw.readingManager.textManager.undo
 
-        def patched_undo():
+        def patched_undo(show_tooltip):
             if _pb:
                 remHook("showQuestion", _pb)
-            original_undo()
+            original_undo(show_tooltip)
             if _dogs:
                 mw.dogs["cnt"] -= 1
             if _pb:
                 addHook("showQuestion", _pb)
 
-        mw.readingManager.textManager.undo = patched_undo
+        mw.readingManager.textManager.undo = lambda show_tooltip=True: patched_undo(show_tooltip)
 
     def setup_irx_model(self):
         model = mw.col.models.new(self.settings["modelName"])
@@ -242,28 +242,27 @@ class ReadingManager:
 
         new_note.setTagsFromStr(current_note.stringTags())
 
-        target_deck_name = (
+        deck_name = (
             mw.col.decks.get(current_card.did
                             )["name"].replace("Incremental Reading::", "")
             if quick_key["deckName"] == "[Mirror]" else quick_key["deckName"]
         )
-        target_deck = mw.col.decks.byName(target_deck_name)
+        target_deck = mw.col.decks.byName(deck_name)
         if not target_deck:
             try:
                 mw.requireReset()
-                mw.col.decks.id(target_deck_name)
+                mw.col.decks.id(deck_name)
             finally:
                 if mw.col:
                     mw.maybeReset()
-            target_deck = mw.col.decks.byName(target_deck_name)
+            target_deck = mw.col.decks.byName(deck_name)
 
         link_to_note = self.textManager._editExtract(
             new_note, target_deck["id"], quick_key["modelName"]
         ) if quick_key["editExtract"] else True
 
         if link_to_note:
-            did = mw.col.decks.byName(target_deck_name)["id"]
-            new_note.model()["did"] = did
+            new_note.model()["did"] = mw.col.decks.byName(deck_name)["id"]
             ret = new_note.dupeOrEmpty()
             if ret == 1:
                 showWarning(
@@ -274,9 +273,7 @@ class ReadingManager:
             if not cards:
                 showWarning(
                     _(
-                        """\
-                    The input you have provided would make an empty \
-                    question on all cards."""
+                        "The input you have provided would make an empty question on all cards."
                     ),
                     help="AddItems",
                 )
@@ -284,8 +281,9 @@ class ReadingManager:
             self.textManager.linkNote(new_note, "card")
             clearAudioQueue()
             mw.col.autosave()
-            if quick_key["editSource"]:
-                EditCurrent(mw)
+
+        if quick_key["editSource"]:
+            EditCurrent(mw)
 
 
 class IREJavaScriptCallback(QObject):
