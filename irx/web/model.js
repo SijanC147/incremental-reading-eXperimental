@@ -1,7 +1,7 @@
 var imagesSidebar = true;
 var stylesVisible = true;
 var highlightsVisible = true;
-var removedVisible = true;
+var removedVisible = false;
 var lastImageUrl = "";
 
 function markRange(identifier, attributes) {
@@ -41,22 +41,32 @@ function insertIrxSpans(targetRanges, identifier, attributes) {
             endNode.setAttribute('irx-' + attr, attributes[attr]);
         }
         //alert(startNode.outerHTML);
-        // showRangeDetails(targetRanges[i]);
-        targetRanges[i].insertNode(startNode);
-        // showRangeDetails(targetRanges[i]);
-        //alert(targetRanges[i].isPointInRange(startNode, 0));
-        //var offset = Array.prototype.indexOf.call(startNode.parentNode.childNodes, startNode);
-        //alert(offset);
-        //targetRanges[i].setStart(startNode.parentNode, offset + 1);
-        //alert(targetRanges[i].isPointInRange(startNode, 0));
-        targetRanges[i].collapse(false);
-        // showRangeDetails(targetRanges[i]);
-        targetRanges[i].insertNode(endNode);
-        // showRangeDetails(targetRanges[i]);
-        targetRanges[i].setStartAfter(startNode);
-        // showRangeDetails(targetRanges[i]);
-        targetRanges[i].setEndBefore(endNode);
-        // showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRange);
+        var initialRangeEndNode = targetRange.endContainer.childNodes[targetRange.endOffset];
+        // alert(Array.prototype.indexOf.call(targetRange.endContainer.childNodes, rangeEndNode))
+        // showNodeDetails(rangeEndNode)
+        targetRange.insertNode(startNode);
+        // alert(Array.prototype.indexOf.call(targetRange.endContainer.childNodes, rangeEndNode))
+        // showRangeDetails(targetRange);
+        var followingRangeEndNode = targetRange.endContainer.childNodes[targetRange.endOffset];
+        if (initialRangeEndNode != followingRangeEndNode) {
+            var fixedOffset = Array.prototype.indexOf.call(targetRange.endContainer.childNodes, initialRangeEndNode);
+            targetRange.setEnd(targetRange.endContainer, fixedOffset);
+        }
+        // showNodeDetails(rangeEndNode)
+        // alert(targetRange.isPointInRange(startNode, 0));
+        // var offset = Array.prototype.indexOf.call(startNode.parentNode.childNodes, startNode);
+        // alert(offset);
+        //targetRange.setStart(startNode.parentNode, offset + 1);
+        // alert(targetRange.isPointInRange(startNode, 0));
+        targetRange.collapse(false);
+        // showRangeDetails(targetRange);
+        targetRange.insertNode(endNode);
+        // showRangeDetails(targetRange);
+        targetRange.setStartAfter(startNode);
+        // showRangeDetails(targetRange);
+        targetRange.setEndBefore(endNode);
+        // showRangeDetails(targetRange);
     }
 }
 
@@ -64,6 +74,14 @@ function showRangeContents(range) {
     var div = document.createElement('div');
     div.appendChild(range.cloneContents().cloneNode(true));
     alert(div.innerHTML);
+}
+
+function showNodeDetails(node) {
+    if (node.nodeType == Node.TEXT_NODE) {
+        alert(node.textContent);
+    } else {
+        alert(node.outerHTML);
+    }
 }
 
 function showRangeDetails(range) {
