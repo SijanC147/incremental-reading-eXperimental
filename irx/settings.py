@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 from codecs import open
 from functools import partial
 from sys import getfilesystemencoding
+from math import floor, ceil
 import json
 import os
 
@@ -24,6 +25,7 @@ from irx.util import (
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
+
 
 REVIEWER_FUNCTIONS = {
     "show help": lambda: mw.readingManager.settingsManager.show_help(),
@@ -61,13 +63,13 @@ REVIEWER_FUNCTIONS = {
 class SettingsManager():
     def __init__(self):
         self.settings_changed = False
-        self.irx_controls = self.build_control_map()
-        self.duplicate_controls = self.check_for_duplicate_controls()
-        self.load_settings()
+        self.irx_controls, self.irx_actions = self.build_control_map()
 
+        self.load_settings()
         if self.settings_changed:
             tooltip("IR3X Settings updated.")
 
+        self.duplicate_controls = self.check_for_duplicate_controls()
         addHook('unloadProfile', self.save_settings)
 
     def build_control_map(self):
@@ -75,79 +77,109 @@ class SettingsManager():
         for key, values in REVIEWER_CONTROLS.items():
             for value in values.split(" "):
                 irx_controls[value] = REVIEWER_FUNCTIONS[key]
-        return irx_controls
+
+        irx_actions = REVIEWER_CONTROLS
+        irx_actions.update(IMAGE_MANAGER_CONTROLS)
+        return irx_controls, irx_actions
 
     def check_for_duplicate_controls(self):
+        all_irx_actions = self.get_all_registered_irx_actions()
         keys = sum(
-            [values.split(" ") for values in REVIEWER_CONTROLS.values()], []
+            [values.split(" ") for values in all_irx_actions.values()], []
         )
         duplicate_controls = list(
             set([key for key in keys if keys.count(key) > 1])
         )
         if duplicate_controls:
-            duplicate_assigned_actions = {
-                duplicate: [
-                    key for key, val in REVIEWER_FUNCTIONS.items()
-                    if val == self.irx_controls[duplicate]
-                ][0]
-                for duplicate in duplicate_controls
-            }
             showInfo(
-                """The following hotkeys were assigned multiple actions \
-they have been assigned these actions this time, but these can change erratically \
-unless the settings are fixed in <code>editable_controls.py</code>:\
-<br/><br/>{}""".format(
-                    "<br/>".join(
-                        [
-                            "<code><font color='red'>{0}</font></code> : {1}".
-                            format(k, v)
-                            for k, v in duplicate_assigned_actions.items()
-                        ]
-                    )
-                )
+                "There are conflicting keys in your <code>editable_controls.py</code> settings, open IR3X help for more info."
             )
         return duplicate_controls
 
+    def get_all_registered_irx_actions(self):
+        actions_keys_index = self.irx_actions
+        quick_keys_actions = self.quick_keys_action_format()
+        actions_keys_index.update(quick_keys_actions)
+        return actions_keys_index
+
     def show_help(self):
-        help_text = "<table>"
-        actions = REVIEWER_FUNCTIONS.keys()
-        for i in range(0, len(actions), 2):
-            hotkeys_text = []
-            for hotkey in REVIEWER_CONTROLS[actions[i]].split(" "):
-                hotkey_text = mac_fix(hotkey)
-                if hotkey in self.duplicate_controls:
-                    hotkey_text = "<font color='red'>{}</font>".format(
-                        hotkey_text
-                    )
-                hotkeys_text.append(hotkey_text)
-            hotkeys_text = "</b></code> or <code><b>".join(hotkeys_text)
-            help_text += "<tr>"
-            help_text += "<td style='padding: 5px'><b><code>{hotkey}</code></b></td><td style='padding: 5px'>{action}</td><td style='padding: 5px'></td>".format(
-                hotkey=hotkeys_text, action=actions[i]
-            )
-            if (i + 1) < len(actions):
-                hotkeys_text = []
-                for hotkey in REVIEWER_CONTROLS[actions[i + 1]].split(" "):
-                    hotkey_text = mac_fix(hotkey)
-                    if hotkey in self.duplicate_controls:
-                        hotkey_text = "<font color='red'>{}</font>".format(
-                            hotkey_text
-                        )
-                    hotkeys_text.append(hotkey_text)
-                hotkeys_text = "</b></code> or <code><b>".join(hotkeys_text)
-                help_text += "<td style='padding: 5px'><b><code>{hotkey}</code></b></td><td style='padding: 5px'>{action}</td>".format(
-                    hotkey=hotkey_text, action=actions[i + 1]
-                )
-            else:
-                help_text += "<td style='padding: 5px'></td>"
-            help_text += "</tr>"
-        help_text += "</table>"
+        action_categories = {
+            "General Controls":
+                [
+                    "remove",
+                    "undo",
+                    "done (suspend)",
+                    "next card",
+                    "show help",
+                    "show reading list",
+                    "show image manager",
+                ],
+            "Text Fomatting": [
+                "bold",
+                "underline",
+                "italic",
+                "strikethrough",
+            ],
+            "Text Highlighting (Extracts)":
+                [
+                    "extract important",
+                    "extract complimentary",
+                    "extract important (and edit)",
+                    "extract complimentary (and edit)",
+                ],
+            "Importing Images":
+                [
+                    "extract image",
+                    "extract image (skip caption)",
+                    "add image",  #todo rename this to import image
+                    "add image (skip caption)",
+                ],
+            "Visual Elements":
+                [
+                    "toggle images",
+                    "toggle formatting",
+                    "toggle removed text",
+                    "toggle extracts",
+                ],
+            "Image Manager":
+                [
+                    "edit image caption",
+                    "mark image(s) for deletion",
+                    "take image(s) (for reordering)",
+                    "place image(s) above (for reordering)",
+                    "place image(s) below (for reordering)",
+                    "submit image changes",
+                ],
+            "Navigation Controls":
+                [
+                    "zoom in",
+                    "zoom out",
+                    "line up",
+                    "line down",
+                    "page up",
+                    "page down",
+                ],
+            "Quick Keys":
+                self.quick_keys_action_format().keys()
+        }
+
         help_dialog = QDialog(mw)
-        help_layout = QHBoxLayout()
-        help_label = QLabel()
-        help_label.setAlignment(Qt.AlignCenter)
-        help_label.setText(help_text)
-        help_layout.addWidget(help_label)
+        help_cat_boxes = [
+            self.make_help_group(
+                cat, acts, self.get_all_registered_irx_actions()
+            ) for cat, acts in action_categories.items() if acts
+        ]
+        help_layout = QVBoxLayout()
+        num_rows = 4
+        one_row_width = int(ceil(len(help_cat_boxes) / num_rows))
+        help_rows_layouts = [QHBoxLayout() for i in range(num_rows)]
+        for i, help_cat_box in enumerate(help_cat_boxes):
+            row = int(i / one_row_width)
+            help_rows_layouts[row].addWidget(help_cat_box)
+
+        for help_row_layout in help_rows_layouts:
+            help_layout.addLayout(help_row_layout)
+
         help_dialog.setLayout(help_layout)
         help_dialog.setWindowModality(Qt.WindowModal)
 
@@ -161,6 +193,40 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
         help_dialog.keyPressEvent = lambda evt: hide_help(evt, orig_dialog_handler)
 
         help_dialog.exec_()
+
+    def make_help_group(self, category, actions, keys_index):
+        controls_layout = QVBoxLayout()
+        for action in actions:
+            this_action_layout = QHBoxLayout()
+            action_label = QLabel(action)
+            this_action_layout.addWidget(action_label)
+            this_action_layout.addStretch()
+            ok_key = '<code><b>{}</b></code>'
+            not_ok_key = '<font color="red">{}</font>'.format(ok_key)
+            key_combo_label = QLabel(
+                " or ".join(
+                    [
+                        ok_key.format(mac_fix(key))
+                        if key not in self.duplicate_controls else
+                        not_ok_key.format(mac_fix(key))
+                        for key in keys_index[action].split(" ")
+                    ]
+                )
+            )
+            this_action_layout.addWidget(key_combo_label)
+            controls_layout.addLayout(this_action_layout)
+
+        category_box = QGroupBox(category)
+        category_box.setLayout(controls_layout)
+
+        return category_box
+
+    def quick_keys_action_format(self):
+        quick_keys_dict = {}
+        for key, params in self.settings['quickKeys'].items():
+            dkey = "{0} -> {1}".format(params['modelName'], params['deckName'])
+            quick_keys_dict[dkey] = quick_keys_dict.get(dkey, []) + [key]
+        return {mac_fix(k): " ".join(v) for k, v in quick_keys_dict.items()}
 
     def show_settings(self):
         dialog = QDialog(mw)
