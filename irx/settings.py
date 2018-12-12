@@ -7,24 +7,20 @@ from sys import getfilesystemencoding
 import json
 import os
 
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QUrl
 from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
-    QTabWidget, QVBoxLayout, QWidget
+    QTabWidget, QVBoxLayout, QWidget, QDesktopServices
 )
 
 from anki.hooks import addHook
 from aqt import mw
-from aqt.utils import showInfo
+from aqt.utils import showInfo, tooltip
 
 from irx.util import (
-    addMenuItem,
-    removeComboBoxItem,
-    setComboBoxItem,
-    updateModificationTime,
-    mac_fix,
-    db_log,
+    addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
+    mac_fix, db_log, pretty_date
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -70,12 +66,7 @@ class SettingsManager():
         self.load_settings()
 
         if self.settings_changed:
-            showInfo(
-                """
-                    Your Incremental Reading settings file has been modified
-                    for compatibility reasons. Please take a moment to
-                    reconfigure the add-on to your liking."""
-            )
+            tooltip("IR3X Settings updated.")
 
         addHook('unloadProfile', self.save_settings)
 
@@ -185,12 +176,18 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
         scheduling_widget = QWidget()
         scheduling_widget.setLayout(scheduling_layout)
 
+        captioning_layout = QVBoxLayout()
+        captioning_layout.addWidget(self.create_image_caption_group_box())
+        captioning_widget = QWidget()
+        captioning_widget.setLayout(captioning_layout)
+
         button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         button_box.accepted.connect(dialog.accept)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(zoom_scroll_widget)
         main_layout.addWidget(scheduling_widget)
+        main_layout.addWidget(captioning_widget)
         main_layout.addWidget(button_box)
 
         dialog.setLayout(main_layout)
@@ -224,6 +221,12 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
         else:
             self.settings['schedLaterMethod'] = 'count'
 
+        test_caption_format = pretty_date(
+            self.image_caption_edit_box.text(), 'invalid'
+        )
+        self.settings['captionFormat'] = self.image_caption_edit_box.text(
+        ) if test_caption_format != 'invalid' else self.settings['captionFormat']
+
         mw.viewManager.resetZoom(mw.state)
 
     def save_settings(self):
@@ -247,6 +250,7 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
             'schedSoonRandom': True,
             'schedSoonValue': 10,
             'modelName': 'IR3X',
+            'captionFormat': "%A, %d %B %Y %H:%M",
             'sourceField': 'Source',
             'textField': 'Text',
             'titleField': 'Title',
@@ -271,6 +275,49 @@ unless the settings are fixed in <code>editable_controls.py</code>:\
             self.settings = self.defaults
 
         self.settings["irx_controls"] = self.irx_controls
+
+    def create_image_caption_group_box(self):
+        parent_layout = QVBoxLayout()
+
+        caption_format_layout = QHBoxLayout()
+        caption_format_label = QLabel('Format (uses strftime tokens)')
+        caption_format_layout.addWidget(caption_format_label)
+        caption_format_layout.addStretch()
+        self.image_caption_edit_box = QLineEdit()
+        self.image_caption_edit_box.setText(self.settings['captionFormat'])
+        self.image_caption_edit_box.setFixedWidth(250)
+        help_button = QPushButton("?")
+        help_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("http://strftime.org/"))
+        )
+
+        caption_format_layout.addWidget(self.image_caption_edit_box)
+        caption_format_layout.addWidget(help_button)
+
+        caption_preview_layout = QVBoxLayout()
+        caption_preview_label = QLabel()
+        caption_preview_label.setAlignment(Qt.AlignCenter)
+        caption_preview_layout.addWidget(caption_preview_label)
+
+        invalid_format_msg = "<font color='red'><i>Invalid Format (won't save)</i></font>"
+
+        def update_caption_preview(templ_format):
+            caption_preview_label.setText(
+                pretty_date(templ_format, invalid=invalid_format_msg)
+            )
+            caption_preview_label.update()
+
+        self.image_caption_edit_box.textChanged.connect(update_caption_preview)
+
+        parent_layout.addLayout(caption_format_layout)
+        parent_layout.addStretch()
+        parent_layout.addLayout(caption_preview_layout)
+
+        group_box = QGroupBox('Auto-Image Captioning')
+        group_box.setLayout(parent_layout)
+        update_caption_preview(self.image_caption_edit_box.text())
+
+        return group_box
 
     def create_scheduling_group_box(self):
         soon_label = QLabel('Soon Button')

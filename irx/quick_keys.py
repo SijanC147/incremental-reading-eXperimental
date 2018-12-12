@@ -19,6 +19,7 @@ from irx.util import (
     mac_fix,
     db_log,
 )
+from irx.editable_controls import REVIEWER_CONTROLS
 
 
 class QuickKeys:
@@ -71,7 +72,7 @@ class QuickKeys:
         noteTypeLayout.addWidget(self.noteTypeComboBox)
         modelNames = sorted([m['name'] for m in mw.col.models.all()])
         self.noteTypeComboBox.addItems(modelNames)
-        edit_fields_button = QPushButton('Edit Fields')
+        edit_fields_button = QPushButton('Target Fields')
         edit_fields_button.setFocusPolicy(Qt.NoFocus)
         edit_fields_button.clicked.connect(self.update_target_fields)
         noteTypeLayout.addWidget(edit_fields_button)
@@ -250,15 +251,35 @@ class QuickKeys:
             'plainText': self.quickKeyPlainTextCheckBox.isChecked()
         }
 
-        for k in ['deckName', 'modelName', 'regularKey']:
-            if not quick_key[k]:
+        quick_key = self.validate_new_quick_key(quick_key)
+        if quick_key:
+            self.settings['quickKeys'].update(quick_key)
+            self.refresh_menu_items()
+            showInfo('New shortcut added: %s' % mac_fix(quick_key.keys()[0]))
+
+    def validate_new_quick_key(self, quick_key):
+        required = ['deckName', 'modelName', 'regularKey']
+        for req in required:
+            if not quick_key.get(req):
+                missing_setting = {
+                    'deckName': "Deck Name",
+                    'modelName': "Note Type",
+                    'regularKey': "Regular Key",
+                }
                 showInfo(
-                    """\
-Please complete all settings. Destination deck, \
-note type, and a letter or number for the key \
-combination are required."""
+                    "The <font color='red'>{0}</font> cannot be left blank.".
+                    format(missing_setting.get(req))
                 )
-                return
+                return False
+
+        filled_in_fields = [
+            trg_field for trg_field in quick_key['fields'].values() if trg_field
+        ]
+        if not filled_in_fields:
+            showInfo(
+                "None of the <font color='red'>target fields</font> have any content."
+            )
+            return False
 
         key_combo = ''
         if quick_key['ctrl']:
@@ -271,7 +292,18 @@ combination are required."""
             key_combo += 'Meta+'
         key_combo += quick_key['regularKey']
 
-        self.settings['quickKeys'][key_combo] = quick_key
-        self.refresh_menu_items()
+        irx_controls = [
+            ctrl.lower() for ctrl in self.settings['irx_controls'].keys()
+        ]
+        if key_combo.lower() in irx_controls:
+            conflicting_action = [
+                k for k, v in REVIEWER_CONTROLS.items()
+                if key_combo.lower() in v.lower()
+            ][0]
+            showInfo(
+                "This <font color='red'>keycombo clashes</font> with <br/><br/> {}"
+                .format(conflicting_action)
+            )
+            return False
 
-        showInfo('New shortcut added: %s' % mac_fix(key_combo))
+        return {key_combo: quick_key}

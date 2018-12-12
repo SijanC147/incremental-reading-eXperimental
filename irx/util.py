@@ -65,8 +65,14 @@ def timestamp_id():
     return int(time.time() * 100)
 
 
-def pretty_date():
-    return datetime.now().strftime("%A, %d %B %Y %H:%M")
+def pretty_date(templ_format=None, invalid=None):
+    default = "%A, %d %B %Y %H:%M"
+    set_format = mw.readingManager.settings.get('captionFormat', default)
+    templ_format = templ_format or set_format
+    try:
+        return datetime.now().strftime(templ_format)
+    except ValueError:
+        return invalid if invalid else datetime.now().strftime(default)
 
 
 def addMenu(fullName):
