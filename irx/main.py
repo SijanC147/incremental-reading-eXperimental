@@ -15,6 +15,7 @@ from aqt import mw, dialogs
 from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
 from aqt.reviewer import Reviewer
+from aqt.overview import Overview
 from aqt.utils import showWarning, tooltip, showInfo
 
 from BeautifulSoup import BeautifulSoup

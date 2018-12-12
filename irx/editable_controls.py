@@ -1,3 +1,9 @@
+# WIN -> MAC:
+#
+#   META -> CTRL
+#   CTRL -> CMD
+#   ALT -> OPT
+
 REVIEWER_CONTROLS = {
     "show help": "?",
     "toggle images": "Meta+m",
@@ -15,7 +21,7 @@ REVIEWER_CONTROLS = {
     "extract important (and edit)": "Alt+1",
     "extract complimentary (and edit)": "Alt+2",
     "bold": "Ctrl+b",
-    "underline": "Ctrl+u",
+    "underline": "Meta+o",
     "italic": "Ctrl+i",
     "strikethrough": "Ctrl+s",
     "remove": "Meta+d",

@@ -245,7 +245,7 @@ class QuickKeys:
             'shift': self.shiftKeyCheckBox.isChecked(),
             'alt': self.altKeyCheckBox.isChecked(),
             'meta': self.metaKeyCheckBox.isChecked(),
-            'regularKey': self.regularKeyComboBox.currentText(),
+            'regularKey': self.regularKeyComboBox.currentText().lower(),
             'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
             'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
             'plainText': self.quickKeyPlainTextCheckBox.isChecked()
@@ -301,7 +301,7 @@ class QuickKeys:
                 if key_combo.lower() in v.lower()
             ][0]
             showInfo(
-                "This <font color='red'>keycombo clashes</font> with <br/><br/> {}"
+                "<font color='red'>Keycombo clash</font> with existing action: <br/><br/> <b>{}</b>"
                 .format(conflicting_action)
             )
             return False

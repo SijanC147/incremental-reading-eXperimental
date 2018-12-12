@@ -30,7 +30,7 @@ from aqt.utils import getText, showInfo, tooltip
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
 from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id
-from irx.editable_controls import HIGHLIGHT_COLORS
+from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
 
 
 class TextManager:
@@ -159,14 +159,14 @@ class TextManager:
 
         def key_handler(evt, _orig):
             key = unicode(evt.text())
-            if key == "d":
+            if key == IMAGE_MANAGER_CONTROLS["mark image(s) for deletion"]:
                 for selected in self.image_list_widget.selectedItems():
                     if selected.background() == std_bg:
                         selected.setBackground(del_bg)
                     elif selected.background() == del_bg:
                         selected.setBackground(std_bg)
                 self.image_list_widget.update()
-            elif key == "e":
+            elif key == IMAGE_MANAGER_CONTROLS["edit image caption"]:
                 selected = self.image_list_widget.selectedItems()
                 if selected and len(selected) == 1:
                     selected_image = selected[0].data(Qt.UserRole)
@@ -181,15 +181,15 @@ class TextManager:
                         self.image_list_widget.update()
                 else:
                     showInfo("Can only edit 1 image at a time")
-            elif key == "t":
+            elif key == IMAGE_MANAGER_CONTROLS["take image(s) (for reordering)"]:
                 for selected in self.image_list_widget.selectedItems():
                     if selected.background() == std_bg:
                         selected.setBackground(sel_bg)
                     elif selected.background() == sel_bg:
                         selected.setBackground(std_bg)
-            elif key in ["a", "b"]:
+            elif key in [IMAGE_MANAGER_CONTROLS["place image(s) above (for reordering)"], IMAGE_MANAGER_CONTROLS["place image(s) below (for reordering)"]]:
                 take_items = []
-                row_offset = 1 if key == "b" else 0
+                row_offset = 1 if key == IMAGE_MANAGER_CONTROLS["place image(s) below (for reordering)"] else 0
                 for i in range(self.image_list_widget.count()):
                     if self.image_list_widget.item(i).background() == sel_bg:
                         self.image_list_widget.item(i).setBackground(std_bg)
