@@ -47,7 +47,7 @@ class TextManager:
     def format_text_range(self, attrs):
         identifier = str(int(time.time() * 10))
         js_obj = ",".join(['{0}:"{1}"'.format(k, v) for k, v in attrs.items()])
-        mw.web.eval('execCommandOnRange(%s, {%s}, null)' % (identifier, js_obj))
+        mw.web.eval('execCommandOnRange(%s, {%s})' % (identifier, js_obj))
         self.save(linked_nid=attrs.get("link"))
 
     def style(self, styles):
@@ -60,7 +60,7 @@ class TextManager:
         self.format_text_range(
             {
                 "bg": HIGHLIGHT_COLORS[extract_type][0],
-                "fg": HIGHLIGHT_COLORS[extract_type][1],
+                # "fg": HIGHLIGHT_COLORS[extract_type][1],
                 "link": note.id,
             }
         )
@@ -323,10 +323,10 @@ class TextManager:
 
         selection = self._clean_extract_html(mw.web.selectedHtml()) if excl_removed else mw.web.selectedHtml()
 
-        current_card = mw.reviewer.card
-        current_note = current_card.note()
         model = mw.col.models.byName(self.settings["modelName"])
 
+        current_card = mw.reviewer.card
+        current_note = current_card.note()
         new_note = Note(mw.col, model)
         new_note.tags = current_note.tags
 
