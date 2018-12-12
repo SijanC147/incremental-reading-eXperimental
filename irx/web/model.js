@@ -40,33 +40,17 @@ function insertIrxSpans(targetRanges, identifier, attributes) {
             startNode.setAttribute('irx-' + attr, attributes[attr]);
             endNode.setAttribute('irx-' + attr, attributes[attr]);
         }
-        //alert(startNode.outerHTML);
-        // showRangeDetails(targetRange);
         var initialRangeEndNode = targetRange.endContainer.childNodes[targetRange.endOffset];
-        // alert(Array.prototype.indexOf.call(targetRange.endContainer.childNodes, rangeEndNode))
-        // showNodeDetails(rangeEndNode)
         targetRange.insertNode(startNode);
-        // alert(Array.prototype.indexOf.call(targetRange.endContainer.childNodes, rangeEndNode))
-        // showRangeDetails(targetRange);
         var followingRangeEndNode = targetRange.endContainer.childNodes[targetRange.endOffset];
         if (initialRangeEndNode != followingRangeEndNode) {
             var fixedOffset = Array.prototype.indexOf.call(targetRange.endContainer.childNodes, initialRangeEndNode);
             targetRange.setEnd(targetRange.endContainer, fixedOffset);
         }
-        // showNodeDetails(rangeEndNode)
-        // alert(targetRange.isPointInRange(startNode, 0));
-        // var offset = Array.prototype.indexOf.call(startNode.parentNode.childNodes, startNode);
-        // alert(offset);
-        //targetRange.setStart(startNode.parentNode, offset + 1);
-        // alert(targetRange.isPointInRange(startNode, 0));
         targetRange.collapse(false);
-        // showRangeDetails(targetRange);
         targetRange.insertNode(endNode);
-        // showRangeDetails(targetRange);
         targetRange.setStartAfter(startNode);
-        // showRangeDetails(targetRange);
         targetRange.setEndBefore(endNode);
-        // showRangeDetails(targetRange);
     }
 }
 
