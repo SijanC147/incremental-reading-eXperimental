@@ -41,22 +41,22 @@ function insertIrxSpans(targetRanges, identifier, attributes) {
             endNode.setAttribute('irx-' + attr, attributes[attr]);
         }
         //alert(startNode.outerHTML);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
         targetRanges[i].insertNode(startNode);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
         //alert(targetRanges[i].isPointInRange(startNode, 0));
         //var offset = Array.prototype.indexOf.call(startNode.parentNode.childNodes, startNode);
         //alert(offset);
         //targetRanges[i].setStart(startNode.parentNode, offset + 1);
         //alert(targetRanges[i].isPointInRange(startNode, 0));
         targetRanges[i].collapse(false);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
         targetRanges[i].insertNode(endNode);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
         targetRanges[i].setStartAfter(startNode);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
         targetRanges[i].setEndBefore(endNode);
-        showRangeDetails(targetRanges[i]);
+        // showRangeDetails(targetRanges[i]);
     }
 }
 
