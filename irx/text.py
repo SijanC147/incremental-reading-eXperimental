@@ -29,7 +29,7 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id
+from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, hex_to_rgb
 from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
 
 
@@ -72,9 +72,12 @@ class TextManager:
         self.format_text_range({"remove": ""})
 
     def linkNote(self, note, extract_type=""):
+        hex_bg = HIGHLIGHT_COLORS[extract_type][0]
+        rgb_bg = hex_to_rgb(hex_bg.replace("#", ""))
+        rgba_bg = "rgba({}, .6)".format(",".join(str(v) for v in rgb_bg))
         self.format_text_range(
             {
-                "bg": HIGHLIGHT_COLORS[extract_type][0],
+                "bg": rgba_bg,
                 # "fg": HIGHLIGHT_COLORS[extract_type][1],
                 "link": note.id,
             }
@@ -330,12 +333,43 @@ class TextManager:
             clean_html += content[clean_start:]
         return unicode(clean_html or content)
 
+    def _remove_other_extracts(self, html):
+        clean_html = html
+        extract_soup = bs(html)
+        for link in extract_soup.findAll("a"):
+            link_str = str(link)
+            href = link.get('href')
+            if href.find("irxnid:")==0:
+                nid = href.replace("irxnid:", "")
+                try:
+                    note = mw.col.getNote(nid)
+                    remove_link = note.model().get("name") == self.settings["modelName"]
+                except TypeError:
+                    remove_link = True
+                link_contents = "".join([unicode(c) for c in link.contents])
+                if not remove_link:
+                    link.replaceWithChildren()
+                    link = bs(str(link).replace(link.get('style'), "")).find('a')
+                    link.insert(0, link_contents)
+                    replacement = str(link)
+                else:
+                    replacement = link_contents
+                clean_html = clean_html.replace(link_str, replacement)
+        for span in extract_soup.findAll('span'):
+            span_id = span.get('id')
+            if not span_id:
+                continue
+            if span_id.find("sx") == 0 or span_id.find("ex") == 0:
+                clean_html = clean_html.replace(str(span), "")
+        return unicode(clean_html)
+                    
     def extract(self, also_edit=False, schedule_extract=None, excl_removed=True):
         if not mw.web.selectedText():
             showInfo("Please select some text to extract.")
             return
 
         selection = self._clean_extract_html(mw.web.selectedHtml()) if excl_removed else mw.web.selectedHtml()
+        selection = self._remove_other_extracts(selection)
 
         model = mw.col.models.byName(self.settings["modelName"])
 
@@ -408,7 +442,6 @@ class TextManager:
                 self.linkNote(new_note, "soon")
             elif schedule_extract == 2:
                 self.linkNote(new_note, "later")
-
 
     def extract_image(self, remove_src=False, skip_captions=False):
         if mw.web.selectedText():

@@ -103,7 +103,7 @@ class ReadingManager:
             irx_shortcut.setEnabled(state or not irx_shortcut.isEnabled())
         if notify and state != self.controls_state:
             tooltip(
-                "<b>IR3X {}</b>".format(
+                "<b>IR3X</b>: {}".format(
                     "<font color='green'>ON</font>"
                     if state else "<font color='red'>OFF</font>"
                 )
@@ -258,7 +258,6 @@ class ReadingManager:
         target_deck = mw.col.decks.byName(deck_name)
         if not target_deck:
             try:
-                mw.requireReset()
                 mw.col.decks.id(deck_name)
             finally:
                 if mw.col:
@@ -287,8 +286,6 @@ class ReadingManager:
                 )
                 return
             self.textManager.linkNote(new_note, "card")
-            clearAudioQueue()
-            mw.col.autosave()
 
         if quick_key["editSource"]:
             EditCurrent(mw)

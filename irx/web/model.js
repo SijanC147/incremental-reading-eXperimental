@@ -5,6 +5,7 @@ var removedVisible = false;
 var lastImageUrl = "";
 
 function markRange(identifier, attributes) {
+    alert(attributes["bg"])
     var sel = window.getSelection();
     if (sel.type == "Range") {
         var range = sel.getRangeAt(0);
@@ -283,6 +284,7 @@ function markRangeStyled(targetRange, visible, styles) {
 
 
 function execCommandOnRange(identifiers, attrs) {
+    detachEventsFromIrxLinks()
     if (!Array.isArray(identifiers) & !selectMarkedRanges(identifiers, false)) {
         identifier = identifiers;
         markRange(identifier, attrs);
@@ -383,6 +385,15 @@ function toggleRemoved(manual) {
         for (var i = 0; i < remNodes.length; i++) {
             remNodes[i].setAttribute('class', remNodes[i].getAttribute('class').replace(prevClass, currClass));
         }
+    }
+}
+
+function detachEventsFromIrxLinks() {
+    var links = document.querySelectorAll("a[href^='irxnid:']:not([onmouseover])");
+    for (var k = 0; k < links.length; k++) {
+        links[k].removeAttribute('style')
+        links[k].removeAttribute('onmouseover');
+        links[k].removeAttribute('onmouseout');
     }
 }
 

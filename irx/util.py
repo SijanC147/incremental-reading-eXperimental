@@ -7,6 +7,7 @@ import io
 import stat
 import time
 from datetime import datetime
+import struct
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut
@@ -15,6 +16,14 @@ from BeautifulSoup import BeautifulSoup as bs4
 
 from aqt import mw
 from aqt.utils import showInfo
+
+
+def hex_to_rgb(_hex):
+    return struct.unpack('BBB', _hex.decode('hex'))
+
+
+def rgb_to_hex(rgb):
+    return struct.pack('BBB', *rgb).encode('hex')
 
 
 def isIrxCard(card):
