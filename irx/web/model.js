@@ -310,8 +310,12 @@ function execCommandOnRange(identifiers, attrs) {
                     document.execCommand("hiliteColor", false, irx_bg);
                 }
                 if (startNode.hasAttribute("irx-link")) {
-                    var irx_link = startNode.getAttribute("irx-link");
-                    document.execCommand("createLink", false, irx_link);
+                    if (highlightsVisible) {
+                        var irx_link = startNode.getAttribute("irx-link");
+                        document.execCommand("createLink", false, irx_link);
+                    } else {
+                        document.execCommand("unlink");
+                    }
                 }
                 if (startNode.hasAttribute("irx-styles")) {
                     var irx_styles = startNode.getAttribute("irx-styles").split(" ");
@@ -323,7 +327,9 @@ function execCommandOnRange(identifiers, attrs) {
             sel.removeAllRanges();
         }
     }
-    attachEventsToIrxLinks();
+    if (highlightsVisible) {
+        attachEventsToIrxLinks();
+    }
 }
 
 
