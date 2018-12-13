@@ -64,6 +64,9 @@ class ReadingManager:
             )
             add_menu_sep("IR3X::Quick Keys")
             addMenuItem(
+                "IR3X", "Scheduling", self.settingsManager.show_scheduling
+            )
+            addMenuItem(
                 "IR3X", "Clean History",
                 lambda: self.textManager.clean_history(notify=True)
             )
