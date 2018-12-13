@@ -27,7 +27,7 @@ from irx.text import TextManager
 from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
-    viewingIrxText, loadFile, db_log
+    viewingIrxText, loadFile, db_log, add_menu_sep
 )
 from irx.view import ViewManager
 
@@ -57,18 +57,26 @@ class ReadingManager:
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
+            addMenuItem("IR3X", "About IR3X", showAbout)
+            add_menu_sep("IR3X")
             addMenuItem(
                 "IR3X::Quick Keys", "Manage", self.quickKeys.show_dialog
             )
-            addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
-            addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
+            add_menu_sep("IR3X::Quick Keys")
+            addMenuItem(
+                "IR3X", "Clean History",
+                lambda: self.textManager.clean_history(notify=True)
+            )
+            addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
+            # addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
+            # addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
+            add_menu_sep("IR3X")
             addMenuItem("IR3X", "Help", self.settingsManager.show_help)
-            addMenuItem("IR3X", "About", showAbout)
             self.setup_irx_controls()
             self.controlsLoaded = True
 
         self.quickKeys.refresh_menu_items()
+        self.textManager.clean_history()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
 
