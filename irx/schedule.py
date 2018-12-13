@@ -125,19 +125,25 @@ class Scheduler:
         dialog.show()
         self.update_organizer()
 
+    def schedule_settings(self, sched_name):
+        sched = [
+            s for s in self.settings["schedules"]
+            if self.settings["schedules"][s]["name"] == sched_name
+        ]
+        if not sched:
+            raise ValueError(
+                "Could not find schedule settings for {}".format(sched_name)
+            )
+        sched = self.settings["schedules"][sched[0]]
+        return int(sched["value"]), sched["random"], sched["method"]
+
     def answer(self, card, ease, from_extract=False):
         if ease == SCHEDULE_SOON:
-            value = self.settings['schedSoonValue']
-            randomize = self.settings['schedSoonRandom']
-            method = self.settings['schedSoonMethod']
+            value, randomize, method = self.schedule_settings("soon")
             tooltip_message = "<font color='red'>soon</font>"
-            ease_str = " S "
         elif ease == SCHEDULE_LATER:
-            value = self.settings['schedLaterValue']
-            randomize = self.settings['schedLaterRandom']
-            method = self.settings['schedLaterMethod']
+            value, randomize, method = self.schedule_settings("later")
             tooltip_message = "<font color='green'>later</font>"
-            ease_str = " L "
         elif ease == SCHEDULE_CUSTOM:
             self.reposition(card, 1)
             self.show_organizer(card)
@@ -154,13 +160,6 @@ class Scheduler:
 
         if randomize:
             new_position = gauss(new_position, new_position / 10)
-
-        card_note = card.note()
-        setField(
-            card_note, self.settings["titleField"],
-            getField(card_note, self.settings["titleField"]) + ease_str
-        )
-        card_note.flush()
 
         new_position = max(1, int(new_position))
         self.reposition(card, new_position, from_extract)

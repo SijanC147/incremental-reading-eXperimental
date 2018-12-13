@@ -21,7 +21,7 @@ from aqt.utils import showInfo, tooltip
 
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
-    mac_fix, db_log, pretty_date
+    mac_fix, db_log, pretty_date, destroy_layout, timestamp_id
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -62,12 +62,13 @@ REVIEWER_FUNCTIONS = {
 
 class SettingsManager():
     def __init__(self):
+        self.schedules = []
         self.settings_changed = False
         self.irx_controls, self.irx_actions = self.build_control_map()
 
         self.load_settings()
         if self.settings_changed:
-            tooltip("IR3X Settings updated.")
+            tooltip("<b>IR3X</b>: Settings updated.")
 
         self.duplicate_controls = self.check_for_duplicate_controls()
         addHook('unloadProfile', self.save_settings)
@@ -237,11 +238,6 @@ class SettingsManager():
         zoom_scroll_widget = QWidget()
         zoom_scroll_widget.setLayout(zoom_scroll_layout)
 
-        scheduling_layout = QVBoxLayout()
-        scheduling_layout.addWidget(self.create_scheduling_group_box())
-        scheduling_widget = QWidget()
-        scheduling_widget.setLayout(scheduling_layout)
-
         captioning_layout = QVBoxLayout()
         captioning_layout.addWidget(self.create_image_caption_group_box())
         captioning_widget = QWidget()
@@ -252,7 +248,6 @@ class SettingsManager():
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(zoom_scroll_widget)
-        main_layout.addWidget(scheduling_widget)
         main_layout.addWidget(captioning_widget)
         main_layout.addWidget(button_box)
 
@@ -264,29 +259,6 @@ class SettingsManager():
         self.settings['generalZoom'] = self.generalZoomSpinBox.value() / 100.0
         self.settings['lineScrollFactor'] = self.lineStepSpinBox.value() / 100.0
         self.settings['pageScrollFactor'] = self.pageStepSpinBox.value() / 100.0
-        self.settings['schedSoonRandom'] = self.soonRandomCheckBox.isChecked()
-        self.settings['schedLaterRandom'] = self.laterRandomCheckBox.isChecked()
-
-        try:
-            self.settings['schedSoonValue'] = int(
-                self.soonIntegerEditBox.text()
-            )
-            self.settings['schedLaterValue'] = int(
-                self.laterIntegerEditBox.text()
-            )
-        except:
-            pass
-
-        if self.soonPercentButton.isChecked():
-            self.settings['schedSoonMethod'] = 'percent'
-        else:
-            self.settings['schedSoonMethod'] = 'count'
-
-        if self.laterPercentButton.isChecked():
-            self.settings['schedLaterMethod'] = 'percent'
-        else:
-            self.settings['schedLaterMethod'] = 'count'
-
         test_caption_format = pretty_date(
             self.image_caption_edit_box.text(), 'invalid'
         )
@@ -295,10 +267,148 @@ class SettingsManager():
 
         mw.viewManager.resetZoom(mw.state)
 
+    def show_scheduling(self):
+
+        main_layout = QVBoxLayout()
+
+        schedules_container_layout = QVBoxLayout()
+        self.schedules_layout = QVBoxLayout()
+
+        for sid in [
+            str(s)
+            for s in sorted([int(i) for i in self.settings["schedules"]])
+        ]:
+            sched_layout, sched_dict = self._create_schedule_row(
+                self.settings["schedules"][sid], rem=(sid not in ["1", "2"])
+            )
+            self.schedules_layout.addLayout(sched_layout)
+            self.schedules.append(sched_dict)
+
+        add_button_layout = QHBoxLayout()
+        add_button = QPushButton("+")
+
+        def add_new_schedule(evt):
+            sched_layout, sched_dict = self._create_schedule_row()
+            self.schedules_layout.addLayout(sched_layout)
+            self.schedules.append(sched_dict)
+
+        add_button.clicked.connect(add_new_schedule)
+        add_button_layout.setAlignment(Qt.AlignHCenter)
+        add_button_layout.addWidget(add_button)
+
+        schedules_container_layout.addLayout(self.schedules_layout)
+        schedules_container_layout.addLayout(add_button_layout)
+        schedules_container_layout.addStretch()
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.validate_and_save_schedules)
+
+        main_layout.addLayout(schedules_container_layout)
+        main_layout.addWidget(button_box)
+
+        self.schedules_dialog = QDialog(mw)
+        self.schedules_dialog.setLayout(main_layout)
+        self.schedules_dialog.setWindowTitle('IR3X Scheduling')
+        self.schedules_dialog.exec_()
+
+    def validate_and_save_schedules(self):
+        sched_names = [s["name"]() for s in self.schedules]
+        duplicate_names = list(
+            set([name for name in sched_names if sched_names.count(name) > 1])
+        )
+        if duplicate_names:
+
+            def validate(evt, src, excl):
+                if evt in excl:
+                    src.setStyleSheet('QLineEdit{ background-color:#FFAD9F; }')
+                else:
+                    src.setStyleSheet('QLineEdit{ background-color:#FFFFFF; }')
+
+            showInfo("All schedules must have a unique name.")
+            for i in range(2, self.schedules_layout.count()):
+                layout = self.schedules_layout.itemAt(i)
+                name_input = layout.itemAt(0).widget()
+                if name_input.text() in duplicate_names:
+                    name_input.setStyleSheet(
+                        'QLineEdit{ background-color:#FFAD9F; }'
+                    )
+                    name_input.textChanged.connect(lambda evt, src=name_input: validate(evt, src, sched_names))
+            return
+
+        self.settings["schedules"] = {}
+        for schedule in self.schedules:
+            self.settings["schedules"][schedule["id"]] = {
+                k: v()
+                for k, v in schedule.items() if k not in ["remove", "id"]
+            }
+            self.settings["schedules"][schedule["id"]]["id"] = schedule["id"]
+
+        self.schedules = []
+        self.schedules_dialog.accept()
+
+    def _create_schedule_row(self, schedule=None, rem=True):
+        def remove_schedule(sid):
+            index = self.schedules.index(
+                [s for s in self.schedules if s["id"] == sid][0]
+            )
+            layout = self.schedules_layout.itemAt(index)
+            destroy_layout(layout)
+            self.schedules_layout.removeItem(layout)
+            self.schedules_layout.update()
+            del layout
+            del self.schedules[index]
+
+        schedule = schedule or {}
+        if not rem:
+            name_widget = QLabel(schedule.get('name'))
+        else:
+            name_widget = QLineEdit()
+            name_widget.setText(schedule.get('name', ""))
+        name_widget.setFixedWidth(150)
+        value_edit_box = QLineEdit()
+        value_edit_box.setFixedWidth(50)
+        percent_button = QRadioButton('Percent')
+        position_button = QRadioButton('Position')
+        random_check_box = QCheckBox('Randomize')
+        sched_id = str(schedule.get("id", timestamp_id()))
+        remove_button = QPushButton("-")
+        remove_button.setEnabled(rem)
+        remove_button.clicked.connect(lambda evt: remove_schedule(sched_id))
+        layout = QHBoxLayout()
+        layout.addWidget(name_widget)
+        layout.addStretch()
+        layout.addWidget(value_edit_box)
+        layout.addWidget(percent_button)
+        layout.addWidget(position_button)
+        layout.addWidget(random_check_box)
+        layout.addWidget(remove_button)
+        button_group = QButtonGroup(layout)
+        button_group.addButton(percent_button)
+        button_group.addButton(position_button)
+        value_edit_box.setText(str(schedule.get("value", "")))
+        percent_button.setChecked(schedule.get('method') == "percent")
+        position_button.setChecked(schedule.get('method') == "position")
+        random_check_box.setChecked(schedule.get('random', False))
+        sched_dict = {
+            "id":
+                sched_id,
+            "name":
+                lambda: name_widget.text(),
+            "value":
+                lambda: value_edit_box.text(),
+            "method":
+                lambda: "percent" if percent_button.isChecked() else "position",
+            "random":
+                lambda: random_check_box.isChecked(),
+            "remove":
+                remove_button
+        }
+        return layout, sched_dict
+
     def save_settings(self):
         with open(self.json_path, 'w', encoding='utf-8') as json_file:
             self.settings["irx_controls"] = {}
-            json.dump(self.settings, json_file)
+            json.dump(self.settings, json_file, indent=4)
             self.settings["irx_controls"] = self.irx_controls
 
         updateModificationTime(self.media_dir)
@@ -315,6 +425,10 @@ class SettingsManager():
             'schedSoonMethod': 'percent',
             'schedSoonRandom': True,
             'schedSoonValue': 10,
+            'plainText': False,
+            "editExtract": False,
+            "editSource": False,
+            "extractDeck": None,
             'modelName': 'IR3X',
             'captionFormat': "%A, %d %B %Y %H:%M",
             'sourceField': 'Source',
@@ -326,6 +440,25 @@ class SettingsManager():
             'linkField': 'Link',
             'imagesField': 'Images',
             'quickKeys': {},
+            'schedules':
+                {
+                    "1":
+                        {
+                            "id": 1,
+                            "name": "soon",
+                            "value": 10,
+                            "method": "percent",
+                            "random": True,
+                        },
+                    "2":
+                        {
+                            "id": 2,
+                            "name": "later",
+                            "value": 50,
+                            "method": "percent",
+                            "random": True,
+                        }
+                },
             'scroll': {},
             'zoom': {},
         }
@@ -382,75 +515,6 @@ class SettingsManager():
         group_box = QGroupBox('Auto-Image Captioning')
         group_box.setLayout(parent_layout)
         update_caption_preview(self.image_caption_edit_box.text())
-
-        return group_box
-
-    def create_scheduling_group_box(self):
-        soon_label = QLabel('Soon Button')
-        later_label = QLabel('Later Button')
-
-        self.soonPercentButton = QRadioButton('Percent')
-        soonPositionButton = QRadioButton('Position')
-        self.laterPercentButton = QRadioButton('Percent')
-        laterPositionButton = QRadioButton('Position')
-        self.soonRandomCheckBox = QCheckBox('Randomize')
-        self.laterRandomCheckBox = QCheckBox('Randomize')
-
-        self.soonIntegerEditBox = QLineEdit()
-        self.soonIntegerEditBox.setFixedWidth(100)
-        self.laterIntegerEditBox = QLineEdit()
-        self.laterIntegerEditBox.setFixedWidth(100)
-
-        if self.settings['schedSoonMethod'] == 'percent':
-            self.soonPercentButton.setChecked(True)
-        else:
-            soonPositionButton.setChecked(True)
-
-        if self.settings['schedLaterMethod'] == 'percent':
-            self.laterPercentButton.setChecked(True)
-        else:
-            laterPositionButton.setChecked(True)
-
-        if self.settings['schedSoonRandom']:
-            self.soonRandomCheckBox.setChecked(True)
-
-        if self.settings['schedLaterRandom']:
-            self.laterRandomCheckBox.setChecked(True)
-
-        self.soonIntegerEditBox.setText(str(self.settings['schedSoonValue']))
-        self.laterIntegerEditBox.setText(str(self.settings['schedLaterValue']))
-
-        soon_layout = QHBoxLayout()
-        soon_layout.addWidget(soon_label)
-        soon_layout.addStretch()
-        soon_layout.addWidget(self.soonIntegerEditBox)
-        soon_layout.addWidget(self.soonPercentButton)
-        soon_layout.addWidget(soonPositionButton)
-        soon_layout.addWidget(self.soonRandomCheckBox)
-
-        later_layout = QHBoxLayout()
-        later_layout.addWidget(later_label)
-        later_layout.addStretch()
-        later_layout.addWidget(self.laterIntegerEditBox)
-        later_layout.addWidget(self.laterPercentButton)
-        later_layout.addWidget(laterPositionButton)
-        later_layout.addWidget(self.laterRandomCheckBox)
-
-        soon_button_group = QButtonGroup(soon_layout)
-        soon_button_group.addButton(self.soonPercentButton)
-        soon_button_group.addButton(soonPositionButton)
-
-        later_button_group = QButtonGroup(later_layout)
-        later_button_group.addButton(self.laterPercentButton)
-        later_button_group.addButton(laterPositionButton)
-
-        layout = QVBoxLayout()
-        layout.addLayout(soon_layout)
-        layout.addLayout(later_layout)
-        layout.addStretch()
-
-        group_box = QGroupBox('Scheduling')
-        group_box.setLayout(layout)
 
         return group_box
 
@@ -542,6 +606,7 @@ class SettingsManager():
 
     def add_missing_settings(self):
         for k, v in self.defaults.items():
-            if k not in self.settings:
+            if (k not in self.settings
+               ) or (k == "schedules" and not self.settings[k]):
                 self.settings[k] = v
                 self.settings_changed = True

@@ -26,6 +26,17 @@ def rgb_to_hex(rgb):
     return struct.pack('BBB', *rgb).encode('hex')
 
 
+def destroy_layout(layout):
+    if layout:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.setParent(None)
+            else:
+                destroy_layout(item.layout())
+
+
 def isIrxCard(card):
     if (
         card and
