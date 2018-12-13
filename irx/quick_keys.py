@@ -90,12 +90,21 @@ class QuickKeys:
         keyComboLayout.addWidget(self.altKeyCheckBox)
         self.metaKeyCheckBox = QCheckBox(mac_fix('Meta'))
         keyComboLayout.addWidget(self.metaKeyCheckBox)
-        self.regularKeyComboBox = QComboBox()
-        self.regularKeyComboBox.addItem('')
-        self.regularKeyComboBox.addItems(
-            list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
-        )
-        keyComboLayout.addWidget(self.regularKeyComboBox)
+
+        self.regular_key_input = QLineEdit()
+        self.regular_key_input.setMaxLength(1)
+        self.regular_key_input.setFixedWidth(30)
+
+        def register_regular_key(evt):
+            ok_keys = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'.lower()
+            key_press = unicode(evt.text()).lower()
+            if key_press in ok_keys:
+                self.regular_key_input.setText(key_press)
+                self.regular_key_input.clearFocus()
+
+        self.regular_key_input.keyPressEvent = register_regular_key
+
+        keyComboLayout.addWidget(self.regular_key_input)
 
         self.quickKeyEditExtractCheckBox = QCheckBox('Edit Extracted Note')
         self.quickKeyEditSourceCheckBox = QCheckBox('Edit Source Note')
@@ -141,7 +150,7 @@ class QuickKeys:
             self.shiftKeyCheckBox.setChecked(model['shift'])
             self.altKeyCheckBox.setChecked(model['alt'])
             self.metaKeyCheckBox.setChecked(model['meta'])
-            setComboBoxItem(self.regularKeyComboBox, model['regularKey'])
+            self.regular_key_input.setText(model['regularKey'])
             self.quickKeyEditExtractCheckBox.setChecked(model['editExtract'])
             self.quickKeyEditSourceCheckBox.setChecked(model['editSource'])
             self.quickKeyPlainTextCheckBox.setChecked(model['plainText'])
@@ -224,7 +233,7 @@ class QuickKeys:
         self.ctrlKeyCheckBox.setChecked(False)
         self.shiftKeyCheckBox.setChecked(False)
         self.altKeyCheckBox.setChecked(False)
-        self.regularKeyComboBox.setCurrentIndex(0)
+        self.regular_key_input.clear()
         self.quickKeyEditExtractCheckBox.setChecked(False)
         self.quickKeyEditSourceCheckBox.setChecked(False)
         self.quickKeyPlainTextCheckBox.setChecked(False)
@@ -245,7 +254,7 @@ class QuickKeys:
             'shift': self.shiftKeyCheckBox.isChecked(),
             'alt': self.altKeyCheckBox.isChecked(),
             'meta': self.metaKeyCheckBox.isChecked(),
-            'regularKey': self.regularKeyComboBox.currentText().lower(),
+            'regularKey': self.regular_key_input.text().lower(),
             'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
             'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
             'plainText': self.quickKeyPlainTextCheckBox.isChecked()

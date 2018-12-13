@@ -130,6 +130,12 @@ def db_log(data, title=None, lim=None):
         )
 
 
+def add_menu_sep(menu_name):
+    menu = mw.customMenus.get(menu_name)
+    if menu:
+        menu.addSeparator()
+
+
 def addMenuItem(menuName, text, function, keys=None):
     action = QAction(text, mw)
 

@@ -44,6 +44,21 @@ class TextManager:
         else:
             self.history = defaultdict(list)
 
+    def clean_history(self, notify=False):
+        notes_cleaned = 0
+        for nid in self.history.keys():
+            try:
+                _ = mw.col.getNote(nid); 
+            except TypeError:
+                self.history.pop(nid)
+                notes_cleaned += 1
+
+        if notes_cleaned:
+            self._write_history()
+            tooltip("<b>IR3X</b>: History cleaned ({} entries removed)".format(notes_cleaned))
+        elif notify:
+            tooltip("<b>IR3X</b>: History clean")
+
     def format_text_range(self, attrs):
         identifier = str(int(time.time() * 10))
         js_obj = ",".join(['{0}:"{1}"'.format(k, v) for k, v in attrs.items()])
