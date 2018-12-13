@@ -211,6 +211,7 @@ class ReadingManager:
             "pyCallback", IREJavaScriptCallback()
         )
         mw.web.eval(loadFile('web', 'model.js'))
+        mw.web.eval('setupIrx();')
 
     def htmlUpdated(self):
         current_note = mw.reviewer.card.note()

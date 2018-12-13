@@ -90,3 +90,52 @@ img.irx-removed-vis,
 .irx-styled-vis.strikeThrough {
     text-decoration: line-through;
 }
+
+div.irx-footer {
+    width:100%;
+    height: 20px;
+    position: fixed;
+    left: 0;
+    bottom: 0; 
+    background-color: white;
+}
+
+div.irx-footer div[id^='irx-hud'] {
+    font-size: 14px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 20px;
+    float: left;
+    height:100%;
+    width: 25%;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+div.irx-footer div[id^='irx-hud']:hover {
+    cursor: pointer;
+    -webkit-transition-duration: 0.2s;
+    transition-duration: 0.2s;
+}
+div.irx-footer div[id^='irx-hud'][irx-toggle~="off"] {
+    opacity: .5;
+}
+div.irx-footer div[id^='irx-hud'][irx-toggle~="off"]:hover {
+    background-color: #96CEB4 !important;
+}
+div.irx-footer div[id^='irx-hud'][irx-toggle~="on"]:hover {
+    background-color: #FFAD9F !important;
+}
+
+div#irx-hud-styles {
+    background-color: #1F8A70;
+}
+div#irx-hud-extracts {
+    background-color: #BEDB39;
+}
+div#irx-hud-removed {
+    background-color: #FFE11A;
+}
+div#irx-hud-images {
+    background-color: #FD7400;
+}
