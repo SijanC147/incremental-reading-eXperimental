@@ -1,11 +1,122 @@
-var imagesSidebar = true;
-var stylesVisible = true;
-var highlightsVisible = true;
-var removedVisible = false;
-var lastImageUrl = "";
+
+var imagesSidebar, stylesVisible, highlightsVisible, removedVisible;
+
+function setupIrx() {
+    setupIrxHudBar()
+    toggleStyles(true, true);
+    toggleHighlights(true, true);
+    toggleImagesSidebar(true, true);
+    toggleRemoved(false, true);
+}
+
+function setupIrxHudBar() {
+    var stylesSwitch = document.getElementById("irx-hud-styles");
+    stylesSwitch.setAttribute('onclick', 'toggleStyles();')
+    var extractsSwitch = document.getElementById("irx-hud-extracts");
+    extractsSwitch.setAttribute('onclick', 'toggleHighlights();')
+    var removedSwitch = document.getElementById("irx-hud-removed");
+    removedSwitch.setAttribute('onclick', 'toggleRemoved();')
+    var imagesSwitch = document.getElementById("irx-hud-images");
+    imagesSwitch.setAttribute('onclick', 'toggleImagesSidebar();');
+    updateIrxHud(["styles", "extracts", "removed", "images"]);
+}
+
+function updateIrxHud(toggles) {
+    if (!Array.isArray(toggles)) {
+        var _toggles = Array();
+        _toggles.push(toggles);
+        toggles = _toggles;
+    }
+    for (var i = 0; i < toggles.length; i++) {
+        toggle = toggles[i];
+        var toggleElement = document.getElementById("irx-hud-" + toggle);
+        if (toggleElement != null) {
+            switch (toggle) {
+                case "styles": boolValue = stylesVisible; break;
+                case "extracts": boolValue = highlightsVisible; break;
+                case "removed": boolValue = removedVisible; break;
+                case "images": boolValue = imagesSidebar; break;
+            }
+            var toggleValue = boolValue == true ? "on" : "off";
+            toggleElement.setAttribute("irx-toggle", toggleValue);
+        }
+    }
+
+}
+
+function toggleStyles(manual, force) {
+    var prevState = stylesVisible;
+    if (manual == null | manual == "toggle") {
+        stylesVisible = !stylesVisible;
+    } else {
+        stylesVisible = manual;
+    }
+    if (stylesVisible != prevState | force) {
+        var remNodes = document.querySelectorAll("[class^='irx-styled']");
+        for (var i = 0; i < remNodes.length; i++) {
+            elementClasses = remNodes[i].getAttribute('class')
+            elementClasses = elementClasses.replace("irx-styled-vis", "")
+            elementClasses = elementClasses.replace("irx-styled-novis", "")
+            toggleClass = "irx-styled-" + (stylesVisible ? "vis" : "novis")
+            newClass = [toggleClass, elementClasses].join(" ");
+            remNodes[i].setAttribute('class', newClass);
+        }
+        updateIrxHud("styles");
+    }
+}
+
+function toggleHighlights(manual, force) {
+    prevState = highlightsVisible;
+    if (manual == null | manual == "toggle") {
+        highlightsVisible = !highlightsVisible;
+    } else {
+        highlightsVisible = manual;
+    }
+    if (prevState != highlightsVisible | force) {
+        execCommandOnRange(rangeIdsWithAttr('bg'), null);
+        updateIrxHud("extracts");
+    }
+}
+
+function toggleRemoved(manual, force) {
+    var prevState = removedVisible
+    if (manual == null | manual == "toggle") {
+        removedVisible = !removedVisible;
+    } else {
+        removedVisible = manual;
+    }
+    if (removedVisible != prevState | force) {
+        var remNodes = document.querySelectorAll("[class^='irx-removed']");
+        for (var i = 0; i < remNodes.length; i++) {
+            elementClasses = remNodes[i].getAttribute('class')
+            elementClasses = elementClasses.replace("irx-removed-vis", "")
+            elementClasses = elementClasses.replace("irx-removed-novis", "")
+            toggleClass = "irx-removed-" + (removedVisible ? "vis" : "novis")
+            newClass = [toggleClass, elementClasses].join(" ");
+            remNodes[i].setAttribute('class', newClass);
+        }
+        updateIrxHud("removed");
+    }
+}
+
+function toggleImagesSidebar(manual, force) {
+    var prevState = imagesSidebar;
+    if (!manual | manual == "toggle") {
+        imagesSidebar = !imagesSidebar;
+    } else {
+        imagesSidebar = manual;
+    }
+    if (prevState != imagesSidebar | force) {
+        var attrVal = imagesSidebar ? "yes" : "no";
+        var text = document.getElementsByClassName("irx-text")[0];
+        var images = document.getElementsByClassName("irx-images")[0];
+        text.setAttribute("irx-images-sidebar", attrVal);
+        images.setAttribute("irx-images-sidebar", attrVal);
+        updateIrxHud("images");
+    }
+}
 
 function markRange(identifier, attributes) {
-    alert(attributes["bg"])
     var sel = window.getSelection();
     if (sel.type == "Range") {
         var range = sel.getRangeAt(0);
@@ -14,7 +125,7 @@ function markRange(identifier, attributes) {
         if (attributes.hasOwnProperty("bg")) {
             targetRanges = splitRange(range, null, "remove");
             targetAttrs["bg"] = attributes["bg"];
-            targetAttrs["link"] = "irxnid:" + attributes["link"];
+            targetAttrs["link"] = attributes["link"].indexOf("irxnid:") == 0 ? attributes["link"] : "irxnid:" + attributes["link"];
         } else if (attributes.hasOwnProperty("remove")) {
             targetRanges = splitRange(accumRemoveRange(range), null, "bg");
             targetAttrs["remove"] = attributes["remove"];
@@ -55,35 +166,6 @@ function insertIrxSpans(targetRanges, identifier, attributes) {
     }
 }
 
-function showRangeContents(range) {
-    var div = document.createElement('div');
-    div.appendChild(range.cloneContents().cloneNode(true));
-    alert(div.innerHTML);
-}
-
-function showNodeDetails(node) {
-    if (node.nodeType == Node.TEXT_NODE) {
-        alert(node.textContent);
-    } else {
-        alert(node.outerHTML);
-    }
-}
-
-function showRangeDetails(range) {
-    startNode = range.startContainer;
-    if (startNode.nodeType == Node.TEXT_NODE) {
-        var startCont = "TEXT";
-    } else {
-        var startCont = startNode.tagName;
-    }
-    endNode = range.endContainer;
-    if (endNode.nodeType == Node.TEXT_NODE) {
-        var endCont = "TEXT";
-    } else {
-        var endCont = endNode.tagName;
-    }
-    alert("\nSTART: " + startCont + "\tOFFSET: " + range.startOffset + "\nEND: " + endCont + "\tOFFSET: " + range.endOffset);
-}
 
 function accumRemoveRange(range) {
     var fragment = range.cloneContents();
@@ -334,7 +416,6 @@ function execCommandOnRange(identifiers, attrs) {
     }
 }
 
-
 function rangeIdsWithAttr(irxAttr) {
     var irxSpans = document.querySelectorAll("span[id^='sx'][irx-" + irxAttr + "]");
     var irxSpansIds = Array();
@@ -342,50 +423,6 @@ function rangeIdsWithAttr(irxAttr) {
         irxSpansIds.push(irxSpans[i].id.substring(2));
     }
     return irxSpansIds;
-}
-
-function toggleStyles(manual) {
-    var prevClass = stylesVisible ? 'irx-styled-vis' : 'irx-styled-novis';
-    if (!manual | manual == "toggle") {
-        stylesVisible = !stylesVisible;
-    } else {
-        stylesVisible = manual;
-    }
-    var currClass = stylesVisible ? 'irx-styled-vis' : 'irx-styled-novis';
-    if (prevClass != currClass) {
-        var remNodes = document.querySelectorAll("." + prevClass);
-        for (var i = 0; i < remNodes.length; i++) {
-            remNodes[i].setAttribute('class', remNodes[i].getAttribute('class').replace(prevClass, currClass));
-        }
-    }
-}
-
-function toggleHighlights(manual) {
-    prev_state = highlightsVisible;
-    if (!manual | manual == "toggle") {
-        highlightsVisible = !highlightsVisible;
-    } else {
-        highlightsVisible = manual;
-    }
-    if (prev_state != highlightsVisible) {
-        execCommandOnRange(rangeIdsWithAttr('bg'), null);
-    }
-}
-
-function toggleRemoved(manual) {
-    var prevClass = removedVisible ? 'irx-removed-vis' : 'irx-removed-novis';
-    if (manual == undefined | manual == "toggle") {
-        removedVisible = !removedVisible;
-    } else {
-        removedVisible = manual;
-    }
-    var currClass = removedVisible ? 'irx-removed-vis' : 'irx-removed-novis';
-    if (prevClass != currClass) {
-        var remNodes = document.querySelectorAll("." + prevClass);
-        for (var i = 0; i < remNodes.length; i++) {
-            remNodes[i].setAttribute('class', remNodes[i].getAttribute('class').replace(prevClass, currClass));
-        }
-    }
 }
 
 function detachEventsFromIrxLinks() {
@@ -413,18 +450,34 @@ function hoverState(irxnid, state) {
     }
 }
 
-function toggleImagesSidebar(manual) {
-    var prev_state = imagesSidebar;
-    if (!manual | manual == "toggle") {
-        imagesSidebar = !imagesSidebar;
+/* DEBUG STUFF */
+
+function showRangeContents(range) {
+    var div = document.createElement('div');
+    div.appendChild(range.cloneContents().cloneNode(true));
+    alert(div.innerHTML);
+}
+
+function showNodeDetails(node) {
+    if (node.nodeType == Node.TEXT_NODE) {
+        alert(node.textContent);
     } else {
-        imagesSidebar = manual;
+        alert(node.outerHTML);
     }
-    if (prev_state != imagesSidebar) {
-        var attrVal = imagesSidebar ? "yes" : "no";
-        var text = document.getElementsByClassName("irx-text")[0];
-        var images = document.getElementsByClassName("irx-images")[0];
-        text.setAttribute("irx-images-sidebar", attrVal);
-        images.setAttribute("irx-images-sidebar", attrVal);
+}
+
+function showRangeDetails(range) {
+    startNode = range.startContainer;
+    if (startNode.nodeType == Node.TEXT_NODE) {
+        var startCont = "TEXT";
+    } else {
+        var startCont = startNode.tagName;
     }
+    endNode = range.endContainer;
+    if (endNode.nodeType == Node.TEXT_NODE) {
+        var endCont = "TEXT";
+    } else {
+        var endCont = endNode.tagName;
+    }
+    alert("\nSTART: " + startCont + "\tOFFSET: " + range.startOffset + "\nEND: " + endCont + "\tOFFSET: " + range.endOffset);
 }
