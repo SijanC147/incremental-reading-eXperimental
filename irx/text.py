@@ -394,6 +394,7 @@ class TextManager:
             elif schedule_extract == 2:
                 self.linkNote(new_note, "later")
 
+
     def extract_image(self, remove_src=False, skip_captions=False):
         if mw.web.selectedText():
             mw.web.triggerPageAction(QWebPage.Copy)
@@ -628,13 +629,24 @@ class TextManager:
 
     def _editExtract(self, note, did, model_name):
         undo_action = lambda: self.undo(show_tooltip=False)
-        def on_add():
-            add_cards.rejected.disconnect(undo_action)
-            add_cards.reject()
+        
+        def _addNote(self, note, _orig):
+            orig_ret = _orig(note)
+            if orig_ret:
+                self.rejected.disconnect(undo_action)
+                self.note_added_ok = True
+            return orig_ret
 
+        def on_add(self):
+            if self.note_added_ok:
+                self.reject()
+        
         add_cards = AddCards(mw)
+        _orig = add_cards.addNote
+        add_cards.note_added_ok = False
+        add_cards.addNote = lambda note: _addNote(add_cards, note, _orig)
         add_cards.rejected.connect(undo_action)
-        add_cards.addButton.clicked.connect(on_add)
+        add_cards.addButton.clicked.connect(lambda: on_add(add_cards))
         add_cards.editor.setNote(note)
         deck_name = mw.col.decks.get(did)["name"]
         if note.stringTags():
