@@ -26,6 +26,25 @@ def rgb_to_hex(rgb):
     return struct.pack('BBB', *rgb).encode('hex')
 
 
+def is_valid_number(_input, decimal=True):
+    try:
+        float(_input)
+        ok = True
+    except ValueError:
+        ok = False
+
+    if ok and not decimal and _input.find(".") > 0:
+        return False
+    return ok
+
+
+def validation_style(_input, valid, ok_bg="#FFF", not_ok_bg="#FFAD9F"):
+    _input.setStyleSheet(
+        "QLineEdit{{ background-color:{}; }}".
+        format(ok_bg if valid else not_ok_bg)
+    )
+
+
 def destroy_layout(layout):
     if layout:
         while layout.count():
