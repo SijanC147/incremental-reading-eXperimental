@@ -11,7 +11,7 @@ from datetime import datetime
 import struct
 
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut
+from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit
 
 from BeautifulSoup import BeautifulSoup as bs4
 
@@ -25,6 +25,22 @@ def irx_data_file(filename):
     )
 
 
+def keypress_capture_field(valid=None):
+    regular_key_input = QLineEdit()
+    regular_key_input.setMaxLength(1)
+    regular_key_input.setFixedWidth(30)
+
+    def register_regular_key(evt):
+        ok_keys = [v.lower() for v in valid]
+        key_press = unicode(evt.text()).lower()
+        if not ok_keys or key_press in ok_keys:
+            regular_key_input.setText(key_press)
+            regular_key_input.clearFocus()
+
+    regular_key_input.keyPressEvent = register_regular_key
+    return regular_key_input
+
+
 def hex_to_rgb(_hex, alpha=None):
     rgb = struct.unpack('BBB', _hex.decode('hex'))
     if alpha:
@@ -34,11 +50,16 @@ def hex_to_rgb(_hex, alpha=None):
     return rgb
 
 
-def rgba_percent_to_decimal(rgba):
+def rgba_percent_to_decimal_alpha(rgba):
     rgba_vals = tuple(map(int, re.findall(r'[0-9]+', rgba.replace("%", ""))))
     alpha_percent = rgba_vals[3]
     alpha_decimal = round(float(alpha_percent) / 100, 2)
     return rgba.replace("{}%".format(alpha_percent), str(alpha_decimal))
+
+
+def rgba_remove_alpha(rgba):
+    rgba_vals = tuple(map(int, re.findall(r'[0-9]+', rgba.replace("%", ""))))
+    return "rgb({})".format(",".join(str(v) for v in rgba_vals[:3]))
 
 
 def rgb_to_hex(rgb):

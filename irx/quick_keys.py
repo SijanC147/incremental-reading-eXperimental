@@ -12,12 +12,8 @@ from aqt import mw
 from aqt.utils import showInfo
 
 from irx.util import (
-    addMenuItem,
-    removeComboBoxItem,
-    setComboBoxItem,
-    updateModificationTime,
-    mac_fix,
-    db_log,
+    addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
+    mac_fix, db_log, keypress_capture_field
 )
 from irx.editable_controls import REVIEWER_CONTROLS
 
@@ -91,18 +87,9 @@ class QuickKeys:
         self.metaKeyCheckBox = QCheckBox(mac_fix('Meta'))
         keyComboLayout.addWidget(self.metaKeyCheckBox)
 
-        self.regular_key_input = QLineEdit()
-        self.regular_key_input.setMaxLength(1)
-        self.regular_key_input.setFixedWidth(30)
-
-        def register_regular_key(evt):
-            ok_keys = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'.lower()
-            key_press = unicode(evt.text()).lower()
-            if key_press in ok_keys:
-                self.regular_key_input.setText(key_press)
-                self.regular_key_input.clearFocus()
-
-        self.regular_key_input.keyPressEvent = register_regular_key
+        self.regular_key_input = keypress_capture_field(
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
+        )
 
         keyComboLayout.addWidget(self.regular_key_input)
 

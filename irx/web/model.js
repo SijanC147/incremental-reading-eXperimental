@@ -426,7 +426,7 @@ function rangeIdsWithAttr(irxAttr) {
 }
 
 function detachEventsFromIrxLinks() {
-    var links = document.querySelectorAll("a[href^='irxnid:']:not([onmouseover])");
+    var links = document.querySelectorAll("a[href^='irxnid:'][onmouseover]");
     for (var k = 0; k < links.length; k++) {
         links[k].removeAttribute('style')
         links[k].removeAttribute('onmouseover');

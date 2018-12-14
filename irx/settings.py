@@ -13,7 +13,8 @@ from PyQt4.QtCore import Qt, QUrl
 from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
-    QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor, QIcon
+    QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor,
+    QIcon
 )
 
 from anki.hooks import addHook
@@ -23,7 +24,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_data_file
+    validation_style, hex_to_rgb, irx_data_file, keypress_capture_field
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -41,10 +42,10 @@ REVIEWER_FUNCTIONS = {
     "add image (skip caption)": lambda: mw.readingManager.textManager.extract_image(skip_captions=True),
     "extract image": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
     "extract image (skip caption)": lambda: mw.readingManager.textManager.extract_image(remove_src=True, skip_captions=True),
-    "extract important": lambda: mw.readingManager.textManager.extract(schedule_extract=1),
-    "extract complimentary": lambda: mw.readingManager.textManager.extract(schedule_extract=2),
-    "extract important (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=1),
-    "extract complimentary (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_extract=2),
+    "extract important": lambda: mw.readingManager.textManager.extract(schedule_name="soon"),
+    "extract complimentary": lambda: mw.readingManager.textManager.extract(schedule_name="later"),
+    "extract important (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_name="soon"),
+    "extract complimentary (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_name="later"),
     "bold": lambda: mw.readingManager.textManager.style("bold"),
     "underline": lambda: mw.readingManager.textManager.style("underline"),
     "italic": lambda: mw.readingManager.textManager.style("italic"),
@@ -73,7 +74,27 @@ class SettingsManager():
             tooltip("<b>IR3X</b>: Settings updated.")
 
         self.duplicate_controls = self.check_for_duplicate_controls()
+        if self.duplicate_controls:
+            self.show_help()
         addHook('unloadProfile', self.save_settings)
+
+    def refresh_schedule_menu_items(self):
+        for action in mw.readingManager.schedule_key_actions:
+            mw.customMenus['IR3X::Schedules'].removeAction(action)
+        mw.readingManager.schedule_key_actions = []
+
+        for schedule in self.settings['schedules'].values():
+            mw.readingManager.schedule_key_actions.append(
+                addMenuItem(
+                    menuName='IR3X::Schedules',
+                    text=schedule["name"],
+                    function=partial(
+                        mw.readingManager.textManager.extract,
+                        schedule_name=schedule["name"]
+                    ),
+                    keys=schedule["anskey"]
+                )
+            )
 
     def build_control_map(self):
         irx_controls = {}
@@ -95,7 +116,13 @@ class SettingsManager():
         )
         if duplicate_controls:
             showInfo(
-                "There are conflicting keys in your <code>editable_controls.py</code> settings, open IR3X help for more info."
+                """
+You made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
+I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
+Review your <code>editable_controls.py</code> file, quick keys settings and/or schedule answer keys. <br/><br/>\
+""",
+                type="warning",
+                title="IR3X Controls"
             )
         return duplicate_controls
 
@@ -103,6 +130,8 @@ class SettingsManager():
         actions_keys_index = self.irx_actions
         quick_keys_actions = self.quick_keys_action_format()
         actions_keys_index.update(quick_keys_actions)
+        schedule_keys_actions = self.schedule_keys_action_format()
+        actions_keys_index.update(schedule_keys_actions)
         return actions_keys_index
 
     def show_help(self):
@@ -163,7 +192,9 @@ class SettingsManager():
                     "page down",
                 ],
             "Quick Keys":
-                self.quick_keys_action_format().keys()
+                self.quick_keys_action_format().keys(),
+            "Scheduling":
+                self.schedule_keys_action_format().keys()
         }
 
         help_dialog = QDialog(mw)
@@ -183,8 +214,11 @@ class SettingsManager():
         for help_row_layout in help_rows_layouts:
             help_layout.addLayout(help_row_layout)
 
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        help_layout.addWidget(button_box)
         help_dialog.setLayout(help_layout)
         help_dialog.setWindowModality(Qt.WindowModal)
+        button_box.accepted.connect(help_dialog.accept)
 
         def hide_help(evt, _orig):
             if unicode(evt.text()) in REVIEWER_CONTROLS["show help"].split(" "):
@@ -227,9 +261,19 @@ class SettingsManager():
     def quick_keys_action_format(self):
         quick_keys_dict = {}
         for key, params in self.settings['quickKeys'].items():
-            dkey = "{0} -> {1}".format(params['modelName'], params['deckName'])
-            quick_keys_dict[dkey] = quick_keys_dict.get(dkey, []) + [key]
+            dict_key = "{0} -> {1}".format(
+                params['modelName'], params['deckName']
+            )
+            quick_keys_dict[dict_key] = quick_keys_dict.get(dict_key,
+                                                            []) + [key]
         return {mac_fix(k): " ".join(v) for k, v in quick_keys_dict.items()}
+
+    def schedule_keys_action_format(self, action_major=True):
+        return {
+            (schedule["name"] if action_major else schedule["anskey"]):
+            (schedule["anskey"] if action_major else schedule["name"])
+            for schedule in self.settings['schedules'].values()
+        }
 
     def show_settings(self):
         dialog = QDialog(mw)
@@ -270,11 +314,10 @@ class SettingsManager():
         mw.viewManager.resetZoom(mw.state)
 
     def show_scheduling(self):
-
-        main_layout = QVBoxLayout()
-
-        schedules_container_layout = QVBoxLayout()
+        self.schedules = []
         self.schedules_layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+        schedules_container_layout = QVBoxLayout()
 
         for sid in [
             str(s)
@@ -316,6 +359,7 @@ class SettingsManager():
     def validate_and_save_schedules(self):
         errors = self.check_for_invalid_sched_names()
         errors += self.check_for_invalid_sched_values()
+        errors += self.check_for_invalid_sched_anskeys()
         if errors:
             showInfo(
                 "There are problems with your schedules: <br/><br/>{}".format(
@@ -336,89 +380,122 @@ class SettingsManager():
         self.schedules_dialog.accept()
 
     def check_for_invalid_sched_values(self):
-        def validate_value(value, method=None, src=None, _method_widget=None):
-            value = src.text() if src else value
-            method = method or (
-                "percent" if _method_widget.isChecked() else "position"
-            )
-            valid = True
-            error_msgs = []
-            if not value:
-                error_msgs.append("Schedule value cannot be empty.")
-                valid = False
-            elif not is_valid_number(value, decimal=False):
-                error_msgs.append("{} is an invalid value.".format(value))
-                valid = False
-            else:
-                if method == "percent" and not (1 <= int(value) <= 100):
-                    error_msgs.append(
-                        "{} is an invalid percent value.".format(value)
-                    )
-                    valid = False
-            if src:
-                validation_style(src, valid)
-            return valid, error_msgs
-
         invalid_scheds = []
         errors = []
         for i, v in enumerate(self.schedules):
-            valid, error_msgs = validate_value(
+            valid, errs = self.validate_sched_value(
                 value=v["value"](), method=v["method"]()
             )
             if not valid:
                 invalid_scheds.append(i)
-                errors += error_msgs
-
-        for index in invalid_scheds:
-            layout = self.schedules_layout.itemAt(index)
-            value_input = layout.itemAt(1).widget()
-            percent_button = layout.itemAt(2).widget()
-            position_button = layout.itemAt(3).widget()
-            validation_style(value_input, False)
-            value_validator = lambda evt, src=value_input, _method=percent_button: validate_value(value=evt, src=src, _method_widget=_method)
-            value_input.textChanged.connect(value_validator)
-            percent_button.clicked.connect(value_validator)
-            position_button.clicked.connect(value_validator)
-
+                errors += errs
         return errors
 
     def check_for_invalid_sched_names(self):
+        invalid_scheds = []
+        errors = []
+        for i, v in enumerate(self.schedules):
+            valid, errs = self.validate_sched_name(v["name"]())
+            if not valid:
+                invalid_scheds.append(i)
+                errors += errs
+        return errors
+
+    def check_for_invalid_sched_anskeys(self):
+        invalid_scheds = []
+        errors = []
+        for i, v in enumerate(self.schedules):
+            valid, errs = self.validate_sched_anskey(v["anskey"]())
+            if not valid:
+                invalid_scheds.append(i)
+                errors += errs
+        return errors
+
+    def validate_sched_value(
+        self, value=None, method=None, src=None, _method_widget=None
+    ):
+        value = src.text() if src else value
+        method = method or (
+            "percent" if _method_widget.isChecked() else "position"
+        )
+        valid = True
+        error_msgs = []
+        if not value:
+            error_msgs.append("Schedule value cannot be empty.")
+            valid = False
+        elif not is_valid_number(value, decimal=False):
+            error_msgs.append("{} is an invalid value.".format(value))
+            valid = False
+        else:
+            if int(value) <= 0:
+                error_msgs.append("Value has to be greater or equal to 1")
+                valid = False
+            elif method == "percent" and not (1 <= int(value) <= 100):
+                error_msgs.append(
+                    "{} is an invalid percent value.".format(value)
+                )
+                valid = False
+
+        if src:
+            validation_style(src, valid)
+        return valid, error_msgs
+
+    def validate_sched_name(self, value=None, src=None):
         sched_names = [s["name"]() for s in self.schedules]
         duplicate_names = list(
             set([name for name in sched_names if sched_names.count(name) > 1])
         )
+        value = src.text() if src else value
+        valid = True
+        error_msgs = []
+        if not value:
+            error_msgs.append("Schedule name cannot be empty.")
+            valid = False
+        elif value in duplicate_names:
+            error_msgs.append("All schedule names must be unique.")
+            valid = False
+        if src:
+            validation_style(src, valid)
+        return valid, error_msgs
 
-        def validate_name(value, duplicates, src=None):
-            value = src.text() if src else value
-            valid = True
-            error_msgs = []
-            if not value:
-                error_msgs.append("Schedule name cannot be empty.")
-                valid = False
-            elif value in duplicates:
-                error_msgs.append("All schedule names must be unique.")
-                valid = False
-            if src:
-                validation_style(src, valid)
-            return valid, error_msgs
-
-        invalid_scheds = []
-        errors = []
-        for i, v in enumerate(self.schedules):
-            valid, error_msgs = validate_name(
-                value=v["name"](), duplicates=duplicate_names
+    def validate_sched_anskey(self, value=None, src=None):
+        sched_anskeys = [s["anskey"]() for s in self.schedules]
+        duplicate_anskeys = list(
+            set(
+                [
+                    anskey for anskey in sched_anskeys
+                    if sched_anskeys.count(anskey) > 1
+                ]
             )
-            if not valid:
-                invalid_scheds.append(i)
-                errors += error_msgs
-
-        for index in invalid_scheds:
-            layout = self.schedules_layout.itemAt(index)
-            name_input = layout.itemAt(0).widget()
-            validation_style(name_input, valid=False)
-            name_input.textChanged.connect(lambda evt, src=name_input: validate_name(evt, duplicate_names, src))
-
-        return errors
+        )
+        value = src.text() if src else value
+        control_conflicts = [
+            k for k, v in self.irx_actions.items() if value in v.split(" ")
+        ]
+        quick_key_conflicts = [
+            k for k, v in self.quick_keys_action_format().items()
+            if value in v.split(" ")
+        ]
+        valid = True
+        error_msgs = []
+        if value in duplicate_anskeys:
+            error_msgs.append("Answer keys must be unique (or left blank).")
+            valid = False
+        elif control_conflicts:
+            error_msgs.append(
+                "<font color='red'>{0}</font> conflicts with key for <b>{1}</b>."
+                .format(value, control_conflicts[0])
+            )
+            valid = False
+        elif quick_key_conflicts:
+            error_msgs.append(
+                "<font color='red'>{0}</font> conflicts with quick key for <b>{1}</b>."
+                .format(value, quick_key_conflicts[0])
+            )
+            valid = False
+        if src:
+            validation_style(src, valid)
+        return valid, error_msgs
 
     def _create_schedule_row(self, schedule=None, rem=True):
         def remove_schedule(sid):
@@ -432,17 +509,27 @@ class SettingsManager():
             del layout
             del self.schedules[index]
 
+        def validate_all(evt, val_fn, pos, **kwargs):
+            for i in range(self.schedules_layout.count()):
+                widget = self.schedules_layout.itemAt(i).itemAt(pos).widget()
+                val_fn(src=widget, **kwargs)
+
         schedule = schedule or {}
         if not rem:
             name_widget = QLabel(schedule.get('name'))
         else:
             name_widget = QLineEdit()
-            name_widget.setText(schedule.get('name', ""))
+            name_widget.setText(schedule.get('name', "schedule name"))
+            name_widget.textChanged.connect(lambda evt, val_fn=self.validate_sched_name, pos=0: validate_all(evt, val_fn, pos))
         name_widget.setFixedWidth(150)
         value_edit_box = QLineEdit()
         value_edit_box.setFixedWidth(50)
         percent_button = QRadioButton('Percent')
         position_button = QRadioButton('Position')
+        value_validator = lambda evt, src=value_edit_box, _method=percent_button: self.validate_sched_value(value=evt, src=src, _method_widget=_method)
+        value_edit_box.textChanged.connect(value_validator)
+        percent_button.clicked.connect(value_validator)
+        position_button.clicked.connect(value_validator)
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
         bg_edit_label = QLabel('Sample Text')
@@ -456,8 +543,14 @@ class SettingsManager():
             font-size: 18px;
             font-family: tahoma, geneva, sans-serif;
         }}
-        """.format(bg=schedule.get("bg", "rgba"+hex_to_rgb("FFE11A", alpha="60%")))
+        """.format(
+                bg=schedule.
+                get("bg", "rgba" + hex_to_rgb("FFE11A", alpha="60%"))
+            )
         )
+        answer_key_label = QLabel("Answer key (1-9)")
+        answer_key_input = keypress_capture_field('123456789')
+        answer_key_input.textChanged.connect(lambda evt, val_fn=self.validate_sched_anskey, pos=5: validate_all(evt, val_fn, pos))
         remove_button = QPushButton()
         remove_button.setEnabled(rem)
         remove_button.clicked.connect(lambda evt: remove_schedule(sched_id))
@@ -468,6 +561,8 @@ class SettingsManager():
         layout.addWidget(percent_button)
         layout.addWidget(position_button)
         layout.addWidget(random_check_box)
+        layout.addWidget(answer_key_input)
+        layout.addWidget(answer_key_label)
         layout.addWidget(bg_edit_label)
         layout.addStretch()
         layout.addWidget(remove_button)
@@ -475,9 +570,12 @@ class SettingsManager():
         button_group.addButton(percent_button)
         button_group.addButton(position_button)
         value_edit_box.setText(str(schedule.get("value", "")))
-        percent_button.setChecked(schedule.get('method', "percent") == "percent")
+        percent_button.setChecked(
+            schedule.get('method', "percent") == "percent"
+        )
         position_button.setChecked(schedule.get('method') == "position")
         random_check_box.setChecked(schedule.get('random', False))
+        answer_key_input.setText(str(schedule.get("anskey", "")))
         sched_dict = {
             "id":
                 sched_id,
@@ -491,6 +589,8 @@ class SettingsManager():
                 lambda: random_check_box.isChecked(),
             "bg":
                 lambda: re.search(r"background-color:\s*([^;]+)", bg_edit_label.styleSheet()).groups()[0],
+            "anskey":
+                lambda: answer_key_input.text(),
             "remove":
                 remove_button
         }
@@ -502,15 +602,25 @@ class SettingsManager():
             raise ValueError("No schedule with ID {} found.".format(sched_id))
         else:
             sched = sched[0]
-        
-        initial_col = tuple(map(int, re.findall(r'[0-9]+', sched["bg"]().replace("rgba", "").replace("%", ""))))
+
+        initial_col = tuple(
+            map(
+                int,
+                re.findall(
+                    r'[0-9]+', sched["bg"]().replace("rgba",
+                                                     "").replace("%", "")
+                )
+            )
+        )
         index = self.schedules.index(sched)
         layout = self.schedules_layout.itemAt(index)
-        bg_label = layout.itemAt(5).widget()
+        bg_label = layout.itemAt(7).widget()
 
         def update_color(evt, label):
-            new_col = evt.getRgb()[:3] 
-            new_col = "rgba{}".format(str(new_col).replace(")", ", 60%)")) # todo OPACITY SETTING 
+            new_col = evt.getRgb()[:3]
+            new_col = "rgba{}".format(
+                str(new_col).replace(")", ", 60%)")
+            )  # todo OPACITY SETTING
             prev_style_sheet = label.styleSheet()
             find_bg_col = re.search(
                 r"background-color:\s*([^;]+)", prev_style_sheet
@@ -521,7 +631,9 @@ class SettingsManager():
             label.update()
 
         color_picker = QColorDialog(QColor(*initial_col), mw)
-        color_picker.colorSelected.connect(lambda evt, lab=bg_label: update_color(evt, lab))
+        color_picker.colorSelected.connect(
+            lambda evt, lab=bg_label: update_color(evt, lab)
+        )
         color_picker.exec_()
 
     def save_settings(self):
@@ -568,6 +680,7 @@ class SettingsManager():
                             "value": 10,
                             "method": "percent",
                             "random": True,
+                            "anskey": "1",
                             "bg": "rgba(255, 0, 0, 60%)"
                         },
                     "2":
@@ -577,6 +690,7 @@ class SettingsManager():
                             "value": 50,
                             "method": "percent",
                             "random": True,
+                            "anskey": "2",
                             "bg": "rgba(0, 255, 0, 60%)"
                         }
                 },
