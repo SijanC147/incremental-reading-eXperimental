@@ -6,6 +6,7 @@ import os
 import io
 import stat
 import time
+import re
 from datetime import datetime
 import struct
 
@@ -18,8 +19,26 @@ from aqt import mw
 from aqt.utils import showInfo
 
 
-def hex_to_rgb(_hex):
-    return struct.unpack('BBB', _hex.decode('hex'))
+def irx_data_file(filename):
+    return os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "data", filename
+    )
+
+
+def hex_to_rgb(_hex, alpha=None):
+    rgb = struct.unpack('BBB', _hex.decode('hex'))
+    if alpha:
+        if isinstance(alpha, (str, unicode)):
+            return str(rgb).replace(")", ", {})".format(alpha))
+        return rgb + (alpha, )
+    return rgb
+
+
+def rgba_percent_to_decimal(rgba):
+    rgba_vals = tuple(map(int, re.findall(r'[0-9]+', rgba.replace("%", ""))))
+    alpha_percent = rgba_vals[3]
+    alpha_decimal = round(float(alpha_percent) / 100, 2)
+    return rgba.replace("{}%".format(alpha_percent), str(alpha_decimal))
 
 
 def rgb_to_hex(rgb):
@@ -72,8 +91,7 @@ def viewingIrxText():
         (mw.state == 'review')
     ):
         return True
-    else:
-        return False
+    return False
 
 
 def mac_fix(keys, reverse=False):

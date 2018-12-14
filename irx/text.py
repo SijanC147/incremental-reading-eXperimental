@@ -29,7 +29,7 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, hex_to_rgb
+from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal
 from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
 
 
@@ -71,14 +71,13 @@ class TextManager:
     def remove(self):
         self.format_text_range({"remove": ""})
 
-    def linkNote(self, note, extract_type=""):
-        hex_bg = HIGHLIGHT_COLORS[extract_type][0]
-        rgb_bg = hex_to_rgb(hex_bg.replace("#", ""))
-        rgba_bg = "rgba({}, .6)".format(",".join(str(v) for v in rgb_bg))
+    def linkNote(self, note, schedule_name=""):
+        sched = [s for s in self.settings["schedules"] if self.settings["schedules"][s]["name"] == schedule_name]
+        if not sched:
+            raise ValueError("No schedule found with the following name: {}".format(schedule_name))
         self.format_text_range(
             {
-                "bg": rgba_bg,
-                # "fg": HIGHLIGHT_COLORS[extract_type][1],
+                "bg": rgba_percent_to_decimal(self.settings["schedules"][sched[0]]["bg"]),
                 "link": note.id,
             }
         )

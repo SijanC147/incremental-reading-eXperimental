@@ -7,12 +7,13 @@ from sys import getfilesystemencoding
 from math import floor, ceil
 import json
 import os
+import re
 
 from PyQt4.QtCore import Qt, QUrl
 from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
-    QTabWidget, QVBoxLayout, QWidget, QDesktopServices
+    QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor, QIcon
 )
 
 from anki.hooks import addHook
@@ -22,7 +23,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style
+    validation_style, hex_to_rgb, irx_data_file
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -370,9 +371,9 @@ class SettingsManager():
 
         for index in invalid_scheds:
             layout = self.schedules_layout.itemAt(index)
-            value_input = layout.itemAt(2).widget()
-            percent_button = layout.itemAt(3).widget()
-            position_button = layout.itemAt(4).widget()
+            value_input = layout.itemAt(1).widget()
+            percent_button = layout.itemAt(2).widget()
+            position_button = layout.itemAt(3).widget()
             validation_style(value_input, False)
             value_validator = lambda evt, src=value_input, _method=percent_button: validate_value(value=evt, src=src, _method_widget=_method)
             value_input.textChanged.connect(value_validator)
@@ -444,22 +445,37 @@ class SettingsManager():
         position_button = QRadioButton('Position')
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
-        remove_button = QPushButton("-")
+        bg_edit_label = QLabel('Sample Text')
+        bg_edit_label.mousePressEvent = lambda evt: self.change_color(sched_id)
+        bg_edit_label.setStyleSheet(
+            """
+        QLabel {{
+            background-color: {bg};
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 18px;
+            font-family: tahoma, geneva, sans-serif;
+        }}
+        """.format(bg=schedule.get("bg", "rgba"+hex_to_rgb("FFE11A", alpha="60%")))
+        )
+        remove_button = QPushButton()
         remove_button.setEnabled(rem)
         remove_button.clicked.connect(lambda evt: remove_schedule(sched_id))
+        remove_button.setIcon(QIcon(irx_data_file("cancel.png")))
         layout = QHBoxLayout()
         layout.addWidget(name_widget)
-        layout.addStretch()
         layout.addWidget(value_edit_box)
         layout.addWidget(percent_button)
         layout.addWidget(position_button)
         layout.addWidget(random_check_box)
+        layout.addWidget(bg_edit_label)
+        layout.addStretch()
         layout.addWidget(remove_button)
         button_group = QButtonGroup(layout)
         button_group.addButton(percent_button)
         button_group.addButton(position_button)
         value_edit_box.setText(str(schedule.get("value", "")))
-        percent_button.setChecked(schedule.get('method') == "percent")
+        percent_button.setChecked(schedule.get('method', "percent") == "percent")
         position_button.setChecked(schedule.get('method') == "position")
         random_check_box.setChecked(schedule.get('random', False))
         sched_dict = {
@@ -473,10 +489,40 @@ class SettingsManager():
                 lambda: "percent" if percent_button.isChecked() else "position",
             "random":
                 lambda: random_check_box.isChecked(),
+            "bg":
+                lambda: re.search(r"background-color:\s*([^;]+)", bg_edit_label.styleSheet()).groups()[0],
             "remove":
                 remove_button
         }
         return layout, sched_dict
+
+    def change_color(self, sched_id):
+        sched = [s for s in self.schedules if s["id"] == sched_id]
+        if not sched:
+            raise ValueError("No schedule with ID {} found.".format(sched_id))
+        else:
+            sched = sched[0]
+        
+        initial_col = tuple(map(int, re.findall(r'[0-9]+', sched["bg"]().replace("rgba", "").replace("%", ""))))
+        index = self.schedules.index(sched)
+        layout = self.schedules_layout.itemAt(index)
+        bg_label = layout.itemAt(5).widget()
+
+        def update_color(evt, label):
+            new_col = evt.getRgb()[:3] 
+            new_col = "rgba{}".format(str(new_col).replace(")", ", 60%)")) # todo OPACITY SETTING 
+            prev_style_sheet = label.styleSheet()
+            find_bg_col = re.search(
+                r"background-color:\s*([^;]+)", prev_style_sheet
+            )
+            prev_col = find_bg_col.groups()[0]
+            new_style_sheet = prev_style_sheet.replace(prev_col, new_col)
+            label.setStyleSheet(new_style_sheet)
+            label.update()
+
+        color_picker = QColorDialog(QColor(*initial_col), mw)
+        color_picker.colorSelected.connect(lambda evt, lab=bg_label: update_color(evt, lab))
+        color_picker.exec_()
 
     def save_settings(self):
         with open(self.json_path, 'w', encoding='utf-8') as json_file:
@@ -522,6 +568,7 @@ class SettingsManager():
                             "value": 10,
                             "method": "percent",
                             "random": True,
+                            "bg": "rgba(255, 0, 0, 60%)"
                         },
                     "2":
                         {
@@ -530,6 +577,7 @@ class SettingsManager():
                             "value": 50,
                             "method": "percent",
                             "random": True,
+                            "bg": "rgba(0, 255, 0, 60%)"
                         }
                 },
             'scroll': {},
@@ -679,7 +727,7 @@ class SettingsManager():
 
     def add_missing_settings(self):
         for k, v in self.defaults.items():
-            if (k not in self.settings
-               ) or (k == "schedules" and not self.settings[k]):
+            no_sched = (k == "schedules" and not self.settings[k])
+            if (k not in self.settings) or no_sched:
                 self.settings[k] = v
                 self.settings_changed = True
