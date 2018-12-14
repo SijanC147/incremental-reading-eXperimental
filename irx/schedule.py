@@ -53,7 +53,7 @@ class Scheduler:
         if method == 'percent':
             total_cards = len([c['id'] for c in self.deck_cards_info(card.did)])
             new_position = total_cards * (value / 100)
-        elif method == 'count':
+        elif method == 'position':
             new_position = value
 
         if random:

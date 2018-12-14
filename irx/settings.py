@@ -8,6 +8,8 @@ from math import floor, ceil
 import json
 import os
 import re
+import operator
+import copy
 
 from PyQt4.QtCore import Qt, QUrl
 from PyQt4.QtGui import (
@@ -83,16 +85,18 @@ class SettingsManager():
             mw.customMenus['IR3X::Schedules'].removeAction(action)
         mw.readingManager.schedule_key_actions = []
 
-        for schedule in self.settings['schedules'].values():
+        schedules = ((int(schedule["anskey"] or 10), schedule["name"]) for schedule in self.settings['schedules'].values())
+        schedules_sorted = sorted(schedules, key=operator.itemgetter(0))
+        for anskey, name in schedules_sorted:
             mw.readingManager.schedule_key_actions.append(
                 addMenuItem(
                     menuName='IR3X::Schedules',
-                    text=schedule["name"],
+                    text=name,
                     function=partial(
                         mw.readingManager.textManager.extract,
-                        schedule_name=schedule["name"]
+                        schedule_name=name
                     ),
-                    keys=schedule["anskey"]
+                    keys=str(anskey if anskey!= 10 else "") or None
                 )
             )
 
@@ -127,7 +131,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         return duplicate_controls
 
     def get_all_registered_irx_actions(self):
-        actions_keys_index = self.irx_actions
+        actions_keys_index = copy.deepcopy(self.irx_actions)
         quick_keys_actions = self.quick_keys_action_format()
         actions_keys_index.update(quick_keys_actions)
         schedule_keys_actions = self.schedule_keys_action_format()
@@ -375,6 +379,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 for k, v in schedule.items() if k not in ["remove", "id"]
             }
             self.settings["schedules"][schedule["id"]]["id"] = schedule["id"]
+        self.refresh_schedule_menu_items()
 
         self.schedules = []
         self.schedules_dialog.accept()
@@ -383,8 +388,9 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         invalid_scheds = []
         errors = []
         for i, v in enumerate(self.schedules):
+            widget = self.schedules_layout.itemAt(i).itemAt(1).widget()
             valid, errs = self.validate_sched_value(
-                value=v["value"](), method=v["method"]()
+                value=v["value"](), method=v["method"](), src=widget
             )
             if not valid:
                 invalid_scheds.append(i)
@@ -395,7 +401,8 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         invalid_scheds = []
         errors = []
         for i, v in enumerate(self.schedules):
-            valid, errs = self.validate_sched_name(v["name"]())
+            widget = self.schedules_layout.itemAt(i).itemAt(0).widget()
+            valid, errs = self.validate_sched_name(v["name"](), src=widget)
             if not valid:
                 invalid_scheds.append(i)
                 errors += errs
@@ -405,7 +412,8 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         invalid_scheds = []
         errors = []
         for i, v in enumerate(self.schedules):
-            valid, errs = self.validate_sched_anskey(v["anskey"]())
+            widget = self.schedules_layout.itemAt(i).itemAt(5).widget()
+            valid, errs = self.validate_sched_anskey(v["anskey"](), src=widget)
             if not valid:
                 invalid_scheds.append(i)
                 errors += errs
@@ -458,7 +466,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             validation_style(src, valid)
         return valid, error_msgs
 
-    def validate_sched_anskey(self, value=None, src=None):
+    def validate_sched_anskey(self, value=None, src=None, name=None):
         sched_anskeys = [s["anskey"]() for s in self.schedules]
         duplicate_anskeys = list(
             set(
@@ -509,6 +517,10 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             del layout
             del self.schedules[index]
 
+        def bg_lab_hover(evt, lab, cursor, text):
+            lab.setText(text)
+            lab.setCursor(cursor)
+
         def validate_all(evt, val_fn, pos, **kwargs):
             for i in range(self.schedules_layout.count()):
                 widget = self.schedules_layout.itemAt(i).itemAt(pos).widget()
@@ -533,12 +545,19 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
         bg_edit_label = QLabel('Sample Text')
+        bg_edit_label.setMouseTracking(True)
+
+        bg_edit_label.enterEvent = lambda evt, lab=bg_edit_label, cursor=Qt.PointingHandCursor, text="Change": bg_lab_hover(evt, lab, cursor, text)
+        bg_edit_label.leaveEvent = lambda evt, lab=bg_edit_label, cursor=Qt.ArrowCursor, text="Sample Text": bg_lab_hover(evt, lab, cursor, text)
+        bg_edit_label.setFixedWidth(150)
+        bg_edit_label.setAlignment(Qt.AlignCenter)
         bg_edit_label.mousePressEvent = lambda evt: self.change_color(sched_id)
         bg_edit_label.setStyleSheet(
             """
         QLabel {{
             background-color: {bg};
-            border-radius: 10px;
+            text-align: center;
+            border-radius: 15px;
             padding: 10px;
             font-size: 18px;
             font-family: tahoma, geneva, sans-serif;
