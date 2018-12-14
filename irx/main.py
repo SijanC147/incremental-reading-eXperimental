@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import re
+import operator
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication, QShortcut, QKeySequence
@@ -27,7 +28,7 @@ from irx.text import TextManager
 from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
-    viewingIrxText, loadFile, db_log, add_menu_sep
+    viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha
 )
 from irx.view import ViewManager
 
@@ -310,15 +311,23 @@ def answerButtonList(self, _old):
     if isIrxCard(current_card):
         page_bottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
         card_pos = mw.readingManager.settings['scroll'][str(current_card.id)]
-        answers_button_list = (
-            (1, "<font color='red'>" + _("Soon") + "</font>"),
-            (2, "<font color='green'>" + _("Later") + "</font>"),
-            # (3, "<font color='blue'>" + _("Custom") + "</font>"),
+        answers_button_list = sorted(
+            (
+                (
+                    int(schedule["anskey"]),
+                    "<font color='{bg}'>{name}</font>".format(
+                        bg=rgba_remove_alpha(schedule["bg"]),
+                        name=_(schedule["name"])
+                    )
+                )
+                for schedule in mw.readingManager.settings['schedules'].values()
+            ),
+            key=operator.itemgetter(0)
         )
         self._irx_answer_flag = False
         if page_bottom == card_pos or page_bottom == 0:
             answers_button_list += (
-                (5, "<font color='purple'>" + _("Done") + "</font>"),
+                (0, "<font color='purple'>" + _("Done") + "</font>"),
             )
             self._irx_answer_flag = True
         return answers_button_list
@@ -329,16 +338,30 @@ def answerButtonList(self, _old):
 def answerCard(self, ease, _old):
     card = self.card
     if isIrxCard(card):
-        if self._irx_answer_flag:
-            ease = ease if ease in (1, 2) else 5
-        else:
-            ease = min(ease, 2)
-        _old(self, ease)
-        irx_schedule = {
-            "1": "soon",
-            "2": "later",
-            "5": "done"
-        }.get(str(ease), "later")
+        active_schedules = list(
+            map(
+                int,
+                mw.readingManager.settingsManager.schedule_keys_action_format(
+                    action_major=False
+                ).keys()
+            )
+        )
+        if self._irx_answer_flag:  # default to done if the done button is available
+            ease = ease if ease in active_schedules else 0
+        else:  # otherwise default to "easiest" equivalent
+            ease = min(active_schedules)
+        if ease != 0:
+            num_buttons = self.mw.col.sched.answerButtons(self.card)
+            irx_norm_ease = [
+                round((float(a) / sum(active_schedules)) * num_buttons)
+                for a in active_schedules
+            ]
+            _old(self, irx_norm_ease[active_schedules.index(ease)])
+        else:  # 10 will pass Anki's assertion, and is not in IRX answer keys limits (1-9)
+            _old(self, 10)
+        irx_schedule = mw.readingManager.settingsManager.schedule_keys_action_format(
+            action_major=False
+        ).get(str(ease)) if ease != 0 else "done"
         mw.readingManager.scheduler.answer(card, irx_schedule)
     else:
         _old(self, ease)
@@ -382,7 +405,7 @@ def defaultEase(self, _old):
     if isIrxCard(current_card):
         page_bottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
         card_pos = mw.readingManager.settings['scroll'][str(current_card.id)]
-        return 5 if page_bottom == card_pos or page_bottom == 0 else 2
+        return 0 if page_bottom == card_pos or page_bottom == 0 else 2
     return _old(self)
 
 
