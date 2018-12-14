@@ -21,7 +21,8 @@ from aqt.utils import showInfo, tooltip
 
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
-    mac_fix, db_log, pretty_date, destroy_layout, timestamp_id
+    mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
+    validation_style
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -312,27 +313,14 @@ class SettingsManager():
         self.schedules_dialog.exec_()
 
     def validate_and_save_schedules(self):
-        sched_names = [s["name"]() for s in self.schedules]
-        duplicate_names = list(
-            set([name for name in sched_names if sched_names.count(name) > 1])
-        )
-        if duplicate_names:
-
-            def validate(evt, src, excl):
-                if evt in excl:
-                    src.setStyleSheet('QLineEdit{ background-color:#FFAD9F; }')
-                else:
-                    src.setStyleSheet('QLineEdit{ background-color:#FFFFFF; }')
-
-            showInfo("All schedules must have a unique name.")
-            for i in range(2, self.schedules_layout.count()):
-                layout = self.schedules_layout.itemAt(i)
-                name_input = layout.itemAt(0).widget()
-                if name_input.text() in duplicate_names:
-                    name_input.setStyleSheet(
-                        'QLineEdit{ background-color:#FFAD9F; }'
-                    )
-                    name_input.textChanged.connect(lambda evt, src=name_input: validate(evt, src, sched_names))
+        errors = self.check_for_invalid_sched_names()
+        errors += self.check_for_invalid_sched_values()
+        if errors:
+            showInfo(
+                "There are problems with your schedules: <br/><br/>{}".format(
+                    "<br/>".join(list(set(errors)))
+                )
+            )
             return
 
         self.settings["schedules"] = {}
@@ -345,6 +333,91 @@ class SettingsManager():
 
         self.schedules = []
         self.schedules_dialog.accept()
+
+    def check_for_invalid_sched_values(self):
+        def validate_value(value, method=None, src=None, _method_widget=None):
+            value = src.text() if src else value
+            method = method or (
+                "percent" if _method_widget.isChecked() else "position"
+            )
+            valid = True
+            error_msgs = []
+            if not value:
+                error_msgs.append("Schedule value cannot be empty.")
+                valid = False
+            elif not is_valid_number(value, decimal=False):
+                error_msgs.append("{} is an invalid value.".format(value))
+                valid = False
+            else:
+                if method == "percent" and not (1 <= int(value) <= 100):
+                    error_msgs.append(
+                        "{} is an invalid percent value.".format(value)
+                    )
+                    valid = False
+            if src:
+                validation_style(src, valid)
+            return valid, error_msgs
+
+        invalid_scheds = []
+        errors = []
+        for i, v in enumerate(self.schedules):
+            valid, error_msgs = validate_value(
+                value=v["value"](), method=v["method"]()
+            )
+            if not valid:
+                invalid_scheds.append(i)
+                errors += error_msgs
+
+        for index in invalid_scheds:
+            layout = self.schedules_layout.itemAt(index)
+            value_input = layout.itemAt(2).widget()
+            percent_button = layout.itemAt(3).widget()
+            position_button = layout.itemAt(4).widget()
+            validation_style(value_input, False)
+            value_validator = lambda evt, src=value_input, _method=percent_button: validate_value(value=evt, src=src, _method_widget=_method)
+            value_input.textChanged.connect(value_validator)
+            percent_button.clicked.connect(value_validator)
+            position_button.clicked.connect(value_validator)
+
+        return errors
+
+    def check_for_invalid_sched_names(self):
+        sched_names = [s["name"]() for s in self.schedules]
+        duplicate_names = list(
+            set([name for name in sched_names if sched_names.count(name) > 1])
+        )
+
+        def validate_name(value, duplicates, src=None):
+            value = src.text() if src else value
+            valid = True
+            error_msgs = []
+            if not value:
+                error_msgs.append("Schedule name cannot be empty.")
+                valid = False
+            elif value in duplicates:
+                error_msgs.append("All schedule names must be unique.")
+                valid = False
+            if src:
+                validation_style(src, valid)
+            return valid, error_msgs
+
+        invalid_scheds = []
+        errors = []
+        for i, v in enumerate(self.schedules):
+            valid, error_msgs = validate_name(
+                value=v["name"](), duplicates=duplicate_names
+            )
+            if not valid:
+                invalid_scheds.append(i)
+                errors += error_msgs
+
+        for index in invalid_scheds:
+            layout = self.schedules_layout.itemAt(index)
+            name_input = layout.itemAt(0).widget()
+            validation_style(name_input, valid=False)
+            name_input.textChanged.connect(lambda evt, src=name_input: validate_name(evt, duplicate_names, src))
+
+        return errors
 
     def _create_schedule_row(self, schedule=None, rem=True):
         def remove_schedule(sid):
