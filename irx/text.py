@@ -29,7 +29,7 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal
+from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha
 from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
 
 
@@ -71,13 +71,13 @@ class TextManager:
     def remove(self):
         self.format_text_range({"remove": ""})
 
-    def linkNote(self, note, schedule_name=""):
+    def link_note(self, note, schedule_name=""):
         sched = [s for s in self.settings["schedules"] if self.settings["schedules"][s]["name"] == schedule_name]
         if not sched:
             raise ValueError("No schedule found with the following name: {}".format(schedule_name))
         self.format_text_range(
             {
-                "bg": rgba_percent_to_decimal(self.settings["schedules"][sched[0]]["bg"]),
+                "bg": rgba_percent_to_decimal_alpha(self.settings["schedules"][sched[0]]["bg"]),
                 "link": note.id,
             }
         )
@@ -348,7 +348,7 @@ class TextManager:
                 link_contents = "".join([unicode(c) for c in link.contents])
                 if not remove_link:
                     link.replaceWithChildren()
-                    link = bs(str(link).replace(link.get('style'), "")).find('a')
+                    link = bs(str(link).replace("&quot;", '"').replace(link.get('style'), "")).find('a')
                     link.insert(0, link_contents)
                     replacement = str(link)
                 else:
@@ -362,11 +362,10 @@ class TextManager:
                 clean_html = clean_html.replace(str(span), "")
         return unicode(clean_html)
                     
-    def extract(self, also_edit=False, schedule_extract=None, excl_removed=True):
+    def extract(self, also_edit=False, schedule_name=None, excl_removed=True):
         if not mw.web.selectedText():
             showInfo("Please select some text to extract.")
             return
-
         selection = self._clean_extract_html(mw.web.selectedHtml()) if excl_removed else mw.web.selectedHtml()
         selection = self._remove_other_extracts(selection)
 
@@ -431,16 +430,17 @@ class TextManager:
         if highlight:
             new_note.model()["did"] = did
             mw.col.addNote(new_note)
-            if schedule_extract:
+            if schedule_name:
                 cards = new_note.cards()
                 if cards:
                     mw.readingManager.scheduler.answer(
-                        cards[0], schedule_extract, from_extract=True
+                        cards[0], schedule_name, from_extract=True
                     )
-            if schedule_extract == 1:
-                self.linkNote(new_note, "soon")
-            elif schedule_extract == 2:
-                self.linkNote(new_note, "later")
+            self.link_note(new_note, schedule_name)
+            # if schedule_name == 1:
+            #     self.linkNote(new_note, "soon")
+            # elif schedule_name == 2:
+            #     self.linkNote(new_note, "later")
 
     def extract_image(self, remove_src=False, skip_captions=False):
         if mw.web.selectedText():

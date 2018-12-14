@@ -13,7 +13,7 @@ from PyQt4.QtGui import (
 from anki.utils import stripHTML
 from aqt import mw
 from aqt.utils import showInfo, tooltip
-from irx.util import setField, getField, db_log
+from irx.util import setField, getField, db_log, rgba_remove_alpha
 
 SCHEDULE_SOON = 1
 SCHEDULE_LATER = 2
@@ -38,22 +38,17 @@ class Scheduler:
                 "Could not find schedule settings for {}".format(sched_name)
             )
         sched = self.settings["schedules"][sched[0]]
-        return int(sched["value"]), sched["random"], sched["method"]
+        return sched
 
-    def answer(self, card, ease, from_extract=False):
-        if ease == SCHEDULE_SOON:
-            value, randomize, method = self.schedule_settings("soon")
-            tooltip_message = "<font color='red'>soon</font>"
-        elif ease == SCHEDULE_LATER:
-            value, randomize, method = self.schedule_settings("later")
-            tooltip_message = "<font color='green'>later</font>"
-        elif ease == SCHEDULE_CUSTOM:
-            self.reposition(card, 1)
-            self.show_organizer(card)
-            return
-        elif ease == SCHEDULE_DONE:
+    def answer(self, card, sched_name, from_extract=False):
+        if sched_name == "done":
             self.done_with_note()
             return
+        schedule = self.schedule_settings(sched_name)
+
+        method = schedule["method"]
+        random = schedule["random"]
+        value = int(schedule["value"])
 
         if method == 'percent':
             total_cards = len([c['id'] for c in self.deck_cards_info(card.did)])
@@ -61,14 +56,17 @@ class Scheduler:
         elif method == 'count':
             new_position = value
 
-        if randomize:
+        if random:
             new_position = gauss(new_position, new_position / 10)
 
         new_position = max(1, int(new_position))
         self.reposition(card, new_position, from_extract)
+        tooltip_message = "<span style='color: {bg};'>{name}</span>".format(
+            bg=rgba_remove_alpha(schedule["bg"]), name=schedule["name"]
+        )
         tooltip(
-            "Ok, we'll get back to that <b>{}</b><br/><i>moved to position <b>{}</b></i>"
-            .format(tooltip_message, new_position)
+            "Sceduled using <b>{}</b><br/><i>moved to position <b>{}</b></i>".
+            format(tooltip_message, new_position)
         )
         self.update_organizer(mark_card=card)
 
@@ -85,6 +83,7 @@ class Scheduler:
         self.update_organizer(mark_card=current_card)
 
     def reposition(self, card, newPos, from_extract=False):
+        "Need to know if from extract, to make sure not to reposition the current note"
         cids = [
             c['id'] for c in self.
             deck_cards_info(card.did, suspended=False, buried=False)

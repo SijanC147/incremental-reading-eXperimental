@@ -36,6 +36,7 @@ class ReadingManager:
     def __init__(self):
         self.controlsLoaded = False
         self.quickKeyActions = []
+        self.schedule_key_actions = []
         self.irx_specific_shortcuts = []
 
         addHook("profileLoaded", self.onProfileLoaded)
@@ -64,8 +65,10 @@ class ReadingManager:
             )
             add_menu_sep("IR3X::Quick Keys")
             addMenuItem(
-                "IR3X", "Scheduling", self.settingsManager.show_scheduling
+                "IR3X::Schedules", "Manage",
+                self.settingsManager.show_scheduling
             )
+            add_menu_sep("IR3X::Schedules")
             addMenuItem(
                 "IR3X", "Clean History",
                 lambda: self.textManager.clean_history(notify=True)
@@ -79,6 +82,7 @@ class ReadingManager:
             self.controlsLoaded = True
 
         self.quickKeys.refresh_menu_items()
+        self.settingsManager.refresh_schedule_menu_items()
         self.textManager.clean_history()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
@@ -289,7 +293,7 @@ class ReadingManager:
                     help="AddItems",
                 )
                 return
-            self.textManager.linkNote(new_note, "card")
+            self.textManager.link_note(new_note, "card")
 
         if quick_key["editSource"]:
             EditCurrent(mw)
@@ -330,7 +334,12 @@ def answerCard(self, ease, _old):
         else:
             ease = min(ease, 2)
         _old(self, ease)
-        mw.readingManager.scheduler.answer(card, ease)
+        irx_schedule = {
+            "1": "soon",
+            "2": "later",
+            "5": "done"
+        }.get(str(ease), "later")
+        mw.readingManager.scheduler.answer(card, irx_schedule)
     else:
         _old(self, ease)
 
@@ -347,7 +356,7 @@ def LinkHandler(self, evt, _old):
             previous_card = self.card
             note = mw.col.getNote(note_id)
             mw.reviewer.card = note.cards()[0]
-            editing = mw.onEditCurrent()
+            mw.onEditCurrent()
             self.card = previous_card
         except:
             tooltip("Could not find note, possibly deleted.")
