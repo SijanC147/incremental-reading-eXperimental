@@ -7,11 +7,12 @@ import io
 import stat
 import time
 import re
+from math import ceil
 from datetime import datetime
 import struct
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit
+from PyQt4.QtCore import Qt, QBuffer
+from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage
 
 from BeautifulSoup import BeautifulSoup as bs4
 
@@ -24,8 +25,36 @@ def irx_data_file(filename):
         os.path.dirname(os.path.abspath(__file__)), "data", filename
     )
 
+
 def capitalize_phrase(phrase):
     return " ".join([w.capitalize() for w in phrase.split(" ")])
+
+
+def compress_image(img_data, extension, max_size=None):
+    max_size = max_size or mw.readingManager.settings.get('maxImageBytes', 2097152)
+    compressed_data = None
+    save_size = len(img_data)
+    if save_size < max_size or extension.lower() == "gif":
+        return img_data, 100
+    step = max(ceil(len(img_data) / 1024 / 1024), 10)
+    quality = 100 - int(step)
+    while save_size > max_size:
+        buf = QBuffer()
+        buf.open(QBuffer.ReadWrite)
+        tmp = QImage()
+        tmp.loadFromData(img_data)
+        tmp.save(buf, extension, quality)
+        save_size = len(buf.data())
+        if save_size <= max_size or quality == 1:
+            compressed_data = buf.data()
+            break;
+        else:
+            quality = max(quality - step, 1)
+        buf.close()
+        del buf
+        del tmp
+    return compressed_data, quality
+
 
 def keypress_capture_field(valid=None):
     regular_key_input = QLineEdit()
