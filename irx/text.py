@@ -118,6 +118,8 @@ class TextManager:
                                 }
                             ).text,
                         "src":
+                            div.findAll('a')[0].get('href'),
+                        "thumb":
                             div.findChild('img').get('irx-src'),
                         "url":
                             div.findAll('a')[1].get('href')
@@ -165,7 +167,7 @@ class TextManager:
             if len(selected) == 1:
                 image = selected[0].data(Qt.UserRole)
                 image_label.setPixmap(
-                    QPixmap(image["src"]).scaled(
+                    QPixmap(image["thumb"]).scaled(
                         image_label.maximumWidth(), image_label.maximumHeight(),
                         Qt.KeepAspectRatio
                     )
@@ -253,7 +255,7 @@ class TextManager:
         if res == 1:
             self.save()
             images = [
-                self._templ_image(image["src"], image["caption"], image["id"], image.get('url')) for image in [
+                self._templ_image(image["src"], image["caption"], image["id"], image.get('url'), image["thumb"]) for image in [
                     self.image_list_widget.item(index).data(Qt.UserRole)
                     for index in range(self.image_list_widget.count())
                     if self.image_list_widget.item(index).background() != del_bg
@@ -421,14 +423,15 @@ class TextManager:
                 ) if not skip_captions else (pretty_date(), 1)
             if ret == 1:
                 extension = os.path.splitext(image_urls[index])[-1][1:].lower()
-                filepath, identifier = self._save_image_to_col(
+                filepath, identifier, thumb_filepath = self._save_image_to_col(
                     image, caption[:50], extension
                 )
                 images_templ += self._templ_image(
                     filepath,
                     caption,
                     identifier=identifier,
-                    url=image_urls[index] if image_urls else None
+                    url=image_urls[index] if image_urls else None,
+                    thumb_src=thumb_filepath
                 )
         if images_templ:
             current_card = mw.reviewer.card
@@ -534,14 +537,15 @@ class TextManager:
         if show_tooltip:
             tooltip(msg)
 
-    def _templ_image(self, src, caption, identifier=None, url=None):
+    def _templ_image(self, src, caption, identifier=None, url=None, thumb_src=None):
         content = {
             "id": identifier or timestamp_id(),
             "src": src,
             "caption": caption,
             "url": url,
+            "thumb": thumb_src or src
         }
-        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}' irx-src='{src}' onerror='irxOnImgError(this);'/>"
+        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{thumb}' irx-src='{thumb}' onerror='irxOnImgError(this);'/>"
         template += "</a><a href='{url}'>" if url else "</a>"
         template += "<span class='irx-caption'>{caption}</span>"
         template += "</a></div>" if url else "</div>"
@@ -559,14 +563,17 @@ class TextManager:
             buf.open(QBuffer.ReadWrite)
             image_data.save(buf, ext, quality=100)
             image_data = buf.data()
-        compressed_data, quality = compress_image(image_data, ext)
-        if quality != 100:
-            tooltip('Compressed {} using {}% quality.'.format(filename, quality))
+        compressed_data, compression_ratio, thumb_data = compress_image(image_data, ext)
+        if int(compression_ratio) != 1:
+            tooltip('<b>IR3X</b>: Compressed image by {0:.2f}%'.format(100 - (compression_ratio*100)))
         identifier = checksum(compressed_data)
         ext_ending = ".{}".format(ext)
         filepath += ext_ending if filepath[-len(ext_ending):] != ext_ending else ""
         media.writeData(filepath, compressed_data)
-        return filepath, identifier
+        thumb_filepath = "thumb_{}".format(filepath) if thumb_data else filepath
+        if thumb_data:
+            media.writeData(thumb_filepath, thumb_data)
+        return filepath, identifier, thumb_filepath
 
     def _grab_images_from_clipboard(self):
         mime_data = QApplication.clipboard().mimeData()
