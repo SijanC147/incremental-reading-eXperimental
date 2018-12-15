@@ -55,15 +55,10 @@ class ReadingManager:
         self.quickKeys = QuickKeys(self.settings)
         mw.viewManager = ViewManager(self.settings)
 
+        self.copy_missing_files()
+
         if not mw.col.models.byName(self.settings["modelName"]):
             self.setup_irx_model()
-
-        fallback_img_filename = "_irx_img_fallback.png"
-        if not exists(join(mw.col.media.dir(), fallback_img_filename)):
-            mw.col.media.writeData(
-                fallback_img_filename,
-                open(irx_file_path(fallback_img_filename), "rb").read()
-            )
 
         disableOutdated()
 
@@ -96,6 +91,21 @@ class ReadingManager:
         self.textManager.clean_history()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
+
+    def copy_missing_files(self):
+        req_files = [
+            "_irx_img_fallback.png",
+            "_irx_images.svg",
+            "_irx_formatting.svg",
+            "_irx_removed.svg",
+            "_irx_extracts.svg",
+        ]
+        for req_file in req_files:
+            if not exists(join(mw.col.media.dir(), req_file)):
+                mw.col.media.writeData(
+                    req_file,
+                    open(irx_file_path(req_file), "rb").read()
+                )
 
     def setup_irx_controls(self):
         for key_seq, action in self.settings["irx_controls"].items():
