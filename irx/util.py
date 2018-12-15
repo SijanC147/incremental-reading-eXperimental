@@ -124,9 +124,9 @@ def mac_fix(keys, reverse=False):
             keys = keys.replace("Alt", "Opt")
             keys = keys.replace("Meta", "Ctrl")
         else:
-            keys = keys.replace("Cmd", "Ctrl")
             keys = keys.replace("Opt", "Alt")
             keys = keys.replace("Ctrl", "Meta")
+            keys = keys.replace("Cmd", "Ctrl")
     return keys
 
 
