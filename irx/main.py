@@ -321,6 +321,7 @@ def answerButtonList(self, _old):
                     )
                 )
                 for schedule in mw.readingManager.settings['schedules'].values()
+                if schedule["anskey"]
             ),
             key=operator.itemgetter(0)
         )

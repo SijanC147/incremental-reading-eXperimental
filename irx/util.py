@@ -24,6 +24,8 @@ def irx_data_file(filename):
         os.path.dirname(os.path.abspath(__file__)), "data", filename
     )
 
+def capitalize_phrase(phrase):
+    return " ".join([w.capitalize() for w in phrase.split(" ")])
 
 def keypress_capture_field(valid=None):
     regular_key_input = QLineEdit()
