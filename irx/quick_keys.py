@@ -247,11 +247,15 @@ class QuickKeys:
             'plainText': self.quickKeyPlainTextCheckBox.isChecked()
         }
 
-        quick_key = self.validate_new_quick_key(quick_key)
-        if quick_key:
-            self.settings['quickKeys'].update(quick_key)
+        valid_quick_key = self.validate_new_quick_key(quick_key)
+        if valid_quick_key:
+            self.settings['quickKeys'].update(valid_quick_key)
             self.refresh_menu_items()
-            showInfo('New shortcut added: %s' % mac_fix(quick_key.keys()[0]))
+            key_combo = mac_fix(valid_quick_key.keys()[0])
+            showInfo('New shortcut added: %s' % key_combo)
+            curr_count = self.quickKeysComboBox.count()
+            self.quickKeysComboBox.addItem(key_combo)
+            self.quickKeysComboBox.setCurrentIndex(curr_count)
 
     def validate_new_quick_key(self, quick_key):
         required = ['deckName', 'modelName', 'regularKey']
