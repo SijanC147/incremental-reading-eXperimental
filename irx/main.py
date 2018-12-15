@@ -315,7 +315,8 @@ def answerButtonList(self, _old):
             (
                 (
                     int(schedule["anskey"]),
-                    "<font color='{bg}'>{name}</font>".format(
+                    "<span style='background-color: {bg}; padding: 2px; border-radius: 3px;'>{name}</span>"
+                    .format(
                         bg=rgba_remove_alpha(schedule["bg"]),
                         name=_(schedule["name"])
                     )
@@ -328,7 +329,11 @@ def answerButtonList(self, _old):
         self._irx_answer_flag = False
         if page_bottom == card_pos or page_bottom == 0:
             answers_button_list += (
-                (0, "<font color='purple'>" + _("Done") + "</font>"),
+                (
+                    0,
+                    "<span style='background-color: #C02F1D; color: #F2F3F4; padding: 2px; border-radius: 3px;'>"
+                    + _("Done") + "</span>"
+                ),
             )
             self._irx_answer_flag = True
         return answers_button_list

@@ -11,7 +11,7 @@ import re
 import operator
 import copy
 
-from PyQt4.QtCore import Qt, QUrl
+from PyQt4.QtCore import Qt, QUrl, QVariant
 from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
@@ -424,12 +424,10 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 errors += errs
         return errors
 
-    def validate_sched_value(
-        self, value=None, method=None, src=None, _method_widget=None
-    ):
+    def validate_sched_value(self, value=None, method=None, src=None, method_widget=None):
         value = src.text() if src else value
         method = method or (
-            "percent" if _method_widget.isChecked() else "position"
+            "percent" if method_widget.isChecked() else "position"
         )
         valid = True
         error_msgs = []
@@ -524,8 +522,9 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             self.schedules_dialog.adjustSize()
 
         def bg_lab_hover(evt, lab, cursor, text):
-            lab.setText(text)
             lab.setCursor(cursor)
+            lab.setText(text)
+
 
         def validate_all(evt, val_fn, pos, **kwargs):
             for i in range(self.schedules_layout.count()):
@@ -545,7 +544,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         value_edit_box.setFixedWidth(50)
         percent_button = QRadioButton('Percent')
         position_button = QRadioButton('Position')
-        value_validator = lambda evt, src=value_edit_box, _method=percent_button: self.validate_sched_value(value=evt, src=src, _method_widget=_method)
+        value_validator = lambda evt, src=value_edit_box, _method=percent_button: self.validate_sched_value(value=evt, src=src, method_widget=_method)
         value_edit_box.textChanged.connect(value_validator)
         percent_button.clicked.connect(value_validator)
         position_button.clicked.connect(value_validator)
@@ -553,12 +552,13 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         sched_id = str(schedule.get("id", timestamp_id()))
         bg_edit_label = QLabel('Sample Text')
         bg_edit_label.setMouseTracking(True)
-
-        bg_edit_label.enterEvent = lambda evt, lab=bg_edit_label, cursor=Qt.PointingHandCursor, text="Change": bg_lab_hover(evt, lab, cursor, text)
+        bg_edit_label.enterEvent = lambda evt, lab=bg_edit_label, cursor=Qt.PointingHandCursor, text="<span style='font-size: 12px'>Click for color<br/>Scroll for opacity</span>": bg_lab_hover(evt, lab, cursor, text)
         bg_edit_label.leaveEvent = lambda evt, lab=bg_edit_label, cursor=Qt.ArrowCursor, text="Sample Text": bg_lab_hover(evt, lab, cursor, text)
         bg_edit_label.setFixedWidth(150)
+        bg_edit_label.setFixedHeight(50)
         bg_edit_label.setAlignment(Qt.AlignCenter)
         bg_edit_label.mousePressEvent = lambda evt: self.change_color(sched_id)
+        bg_edit_label.wheelEvent = lambda evt: self.change_opacity(evt, sched_id)
         bg_edit_label.setStyleSheet(
             """
         QLabel {{
@@ -622,6 +622,28 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         }
         return layout, sched_dict
 
+    def change_opacity(self, evt, sched_id):
+        sched = [s for s in self.schedules if s["id"] == sched_id]
+        if not sched:
+            raise ValueError("No schedule with ID {} found.".format(sched_id))
+        else:
+            sched = sched[0]
+
+        index = self.schedules.index(sched)
+        layout = self.schedules_layout.itemAt(index)
+        bg_label = layout.itemAt(7).widget()
+        prev_style_sheet = bg_label.styleSheet()
+        find_bg_col = re.search(r"background-color:\s*([^;]+)", prev_style_sheet)
+        prev_bg_col = find_bg_col.groups()[0]
+        curr_opacity = tuple(map(int,re.findall(r'[0-9]+', prev_bg_col)))[3]
+        new_opacity = min(curr_opacity + 1, 100) if evt.delta() > 30 else max(curr_opacity - 1, 30) if evt.delta() < -30 else curr_opacity
+        new_bg_col = prev_bg_col.replace("{}%".format(curr_opacity), "{}%".format(new_opacity))
+        new_style_sheet = prev_style_sheet.replace(prev_bg_col, new_bg_col) 
+        bg_label.setText("{}%".format(new_opacity))
+        bg_label.setStyleSheet(new_style_sheet)
+        bg_label.update()
+
+
     def change_color(self, sched_id):
         sched = [s for s in self.schedules if s["id"] == sched_id]
         if not sched:
@@ -629,29 +651,20 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         else:
             sched = sched[0]
 
-        initial_col = tuple(
-            map(
-                int,
-                re.findall(
-                    r'[0-9]+', sched["bg"]().replace("rgba",
-                                                     "").replace("%", "")
-                )
-            )
-        )
+        initial_col = tuple(map(int,re.findall(r'[0-9]+', sched["bg"]())))
         index = self.schedules.index(sched)
         layout = self.schedules_layout.itemAt(index)
         bg_label = layout.itemAt(7).widget()
 
         def update_color(evt, label):
             new_col = evt.getRgb()[:3]
-            new_col = "rgba{}".format(
-                str(new_col).replace(")", ", 60%)")
-            )  # todo OPACITY SETTING
             prev_style_sheet = label.styleSheet()
             find_bg_col = re.search(
                 r"background-color:\s*([^;]+)", prev_style_sheet
             )
             prev_col = find_bg_col.groups()[0]
+            prev_opacity = tuple(map(int,re.findall(r'[0-9]+', prev_col)))[3]
+            new_col = "rgba{}".format(str(new_col).replace(")", ", {}%)".format(prev_opacity))) 
             new_style_sheet = prev_style_sheet.replace(prev_col, new_col)
             label.setStyleSheet(new_style_sheet)
             label.update()
@@ -688,6 +701,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             "extractDeck": None,
             'modelName': 'IR3X',
             'captionFormat': "%A, %d %B %Y %H:%M",
+            'maxImageBytes': 2097152,
             'sourceField': 'Source',
             'textField': 'Text',
             'titleField': 'Title',
