@@ -701,7 +701,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             "extractDeck": None,
             'modelName': 'IR3X',
             'captionFormat': "%A, %d %B %Y %H:%M",
-            'maxImageBytes': 2097152,
+            'maxImageBytes': 1048576,
             'sourceField': 'Source',
             'textField': 'Text',
             'titleField': 'Title',

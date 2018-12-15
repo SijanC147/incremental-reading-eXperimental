@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 import sys
 import os
 import io
@@ -31,29 +31,45 @@ def capitalize_phrase(phrase):
 
 
 def compress_image(img_data, extension, max_size=None):
-    max_size = max_size or mw.readingManager.settings.get('maxImageBytes', 2097152)
-    compressed_data = None
+    max_size = max_size or mw.readingManager.settings.get(
+        'maxImageBytes', 1048576
+    )
+    compressed_data = img_data
     save_size = len(img_data)
-    if save_size < max_size or extension.lower() == "gif":
-        return img_data, 100
-    step = max(ceil(len(img_data) / 1024 / 1024), 10)
-    quality = 100 - int(step)
-    while save_size > max_size:
+    compression_ratio = round(len(compressed_data) / len(img_data), 4)
+    while int(compression_ratio) == 1 and extension.lower() != "gif":
+        quality = 100
+        step = max(ceil(len(img_data) / 1024 / 1024), 15)
+        while save_size > max_size and quality != 50:
+            quality = max(quality - step, 50)
+            buf = QBuffer()
+            buf.open(QBuffer.ReadWrite)
+            tmp = QImage()
+            tmp.loadFromData(img_data)
+            tmp.save(buf, extension, quality)
+            save_size = len(buf.data())
+            if save_size <= max_size:
+                compressed_data = buf.data()
+            buf.close()
+        compression_ratio = round(len(compressed_data) / len(img_data), 4)
+        if int(compression_ratio) == 1:
+            buf = QBuffer()
+            buf.open(QBuffer.ReadWrite)
+            tmp = tmp.scaled(tmp.width()/2, tmp.height()/2)
+            tmp.save(buf, extension)
+            img_data = buf.data()
+            buf.close()
+    if extension.lower() != "gif":
+        thumb = QImage()
+        thumb.loadFromData(compressed_data)
+        thumb = thumb.scaled(250, 250, Qt.KeepAspectRatio)
         buf = QBuffer()
         buf.open(QBuffer.ReadWrite)
-        tmp = QImage()
-        tmp.loadFromData(img_data)
-        tmp.save(buf, extension, quality)
-        save_size = len(buf.data())
-        if save_size <= max_size or quality == 1:
-            compressed_data = buf.data()
-            break;
-        else:
-            quality = max(quality - step, 1)
-        buf.close()
-        del buf
-        del tmp
-    return compressed_data, quality
+        thumb.save(buf, extension)
+        thumb_data = buf.data()
+    else:
+        thumb_data = None
+    return compressed_data, compression_ratio, thumb_data
 
 
 def keypress_capture_field(valid=None):
