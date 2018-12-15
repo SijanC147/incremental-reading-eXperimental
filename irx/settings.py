@@ -26,7 +26,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_data_file, keypress_capture_field, capitalize_phrase
+    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -580,7 +580,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         remove_button = QPushButton()
         remove_button.setEnabled(rem)
         remove_button.clicked.connect(lambda evt: remove_schedule(sched_id))
-        remove_button.setIcon(QIcon(irx_data_file("cancel.png")))
+        remove_button.setIcon(QIcon(irx_file_path("cancel.png")))
         layout = QHBoxLayout()
         layout.addWidget(name_widget)
         layout.addWidget(value_edit_box)

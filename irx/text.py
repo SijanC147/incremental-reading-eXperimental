@@ -290,17 +290,7 @@ class TextManager:
         if res == 1:
             self.save()
             images = [
-                "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><a href='{url}'><span class='irx-caption'>{caption}</span></a></div>"
-                .format(
-                    id=image["id"],
-                    src=image["src"],
-                    url=image['url'],
-                    caption=image["caption"]
-                ) if image['url'] else
-                "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'></a><span class='irx-caption'>{caption}</span></div>"
-                .format(
-                    id=image["id"], src=image["src"], caption=image["caption"]
-                ) for image in [
+                self._templ_image(image["src"], image["caption"], image["id"], image.get('url')) for image in [
                     self.image_list_widget.item(index).data(Qt.UserRole)
                     for index in range(self.image_list_widget.count())
                     if self.image_list_widget.item(index).background() != del_bg
@@ -588,7 +578,7 @@ class TextManager:
             "caption": caption,
             "url": url,
         }
-        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}'>"
+        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}' onerror='irxOnImgError(this);'/>"
         template += "</a><a href='{url}'>" if url else "</a>"
         template += "<span class='irx-caption'>{caption}</span>"
         template += "</a></div>" if url else "</div>"

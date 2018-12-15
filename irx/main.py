@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import re
 import operator
+from os.path import join, exists
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication, QShortcut, QKeySequence
@@ -28,7 +29,8 @@ from irx.text import TextManager
 from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
-    viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha
+    viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha,
+    irx_file_path
 )
 from irx.view import ViewManager
 
@@ -55,6 +57,13 @@ class ReadingManager:
 
         if not mw.col.models.byName(self.settings["modelName"]):
             self.setup_irx_model()
+
+        fallback_img_filename = "_irx_img_fallback.png"
+        if not exists(join(mw.col.media.dir(), fallback_img_filename)):
+            mw.col.media.writeData(
+                fallback_img_filename,
+                open(irx_file_path(fallback_img_filename), "rb").read()
+            )
 
         disableOutdated()
 
