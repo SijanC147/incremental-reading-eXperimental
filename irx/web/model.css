@@ -60,21 +60,30 @@ div.irx-overlay-controls div[id^='irx-hud'] {
     width: 25%;
 }
 
+div.irx-overlay-controls div[id^='irx-hud'] img {
+    position: relative;
+    top: 1px;
+    height: 85%;
+    -webkit-transition: all .1s;
+    transition: all .1s;
+}
+
 div.irx-overlay-controls div[id^='irx-hud']:hover {
     cursor: pointer;
     -webkit-transition-duration: 0.2s;
     transition-duration: 0.2s;
 }
 
-div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="off"]:hover {
-    background-color: #96CEB4 !important;
+div.irx-overlay-controls div[id^='irx-hud']:hover > img{
+    height: 0%;
 }
-div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="on"]:hover {
-    background-color: #FFAD9F !important;
+div.irx-overlay-controls div[id^='irx-hud']:hover::before {
+    content: attr(irx-desc);
 }
 
 div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="off"] {
     opacity: .5;
+    background-color: #B8B8B8 !important;
 }
 
 div#irx-hud-styles {
@@ -104,6 +113,8 @@ div#irx-hud-images {
 a[href^="irxnid"] {
     text-decoration: none;
     color: inherit;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
 }
 
 div.irx-content {
