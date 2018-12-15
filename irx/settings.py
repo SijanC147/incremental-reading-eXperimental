@@ -16,7 +16,7 @@ from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
     QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor,
-    QIcon
+    QIcon, QLayout
 )
 
 from anki.hooks import addHook
@@ -26,7 +26,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_data_file, keypress_capture_field
+    validation_style, hex_to_rgb, irx_data_file, keypress_capture_field, capitalize_phrase
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -158,10 +158,10 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             ],
             "Text Highlighting (Extracts)":
                 [
-                    "extract important",
-                    "extract complimentary",
-                    "extract important (and edit)",
-                    "extract complimentary (and edit)",
+                    # "extract important",
+                    # "extract complimentary",
+                    # "extract important (and edit)",
+                    # "extract complimentary (and edit)",
                 ],
             "Importing Images":
                 [
@@ -197,7 +197,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 ],
             "Quick Keys":
                 self.quick_keys_action_format().keys(),
-            "Scheduling":
+            "Scheduling (Highlighting)":
                 self.schedule_keys_action_format().keys()
         }
 
@@ -207,6 +207,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 cat, acts, self.get_all_registered_irx_actions()
             ) for cat, acts in action_categories.items() if acts
         ]
+        help_cat_boxes = [h for h in help_cat_boxes if h]
         help_layout = QVBoxLayout()
         num_rows = 4
         one_row_width = int(ceil(len(help_cat_boxes) / num_rows))
@@ -237,7 +238,8 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
 
     def make_help_group(self, category, actions, keys_index):
         controls_layout = QVBoxLayout()
-        for action in actions:
+        active_actions = [a for a in actions if a in keys_index.keys()] 
+        for action in active_actions:
             this_action_layout = QHBoxLayout()
             action_label = QLabel(action)
             this_action_layout.addWidget(action_label)
@@ -260,7 +262,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         category_box = QGroupBox(category)
         category_box.setLayout(controls_layout)
 
-        return category_box
+        return category_box if active_actions else False 
 
     def quick_keys_action_format(self):
         quick_keys_dict = {}
@@ -320,8 +322,11 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
     def show_scheduling(self):
         self.schedules = []
         self.schedules_layout = QVBoxLayout()
+        self.schedules_layout.setSizeConstraint(QLayout.SetFixedSize)
         main_layout = QVBoxLayout()
+        main_layout.setSizeConstraint(QLayout.SetFixedSize)
         schedules_container_layout = QVBoxLayout()
+        schedules_container_layout.setSizeConstraint(QLayout.SetFixedSize)
 
         for sid in [
             str(s)
@@ -516,6 +521,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             self.schedules_layout.update()
             del layout
             del self.schedules[index]
+            self.schedules_dialog.adjustSize()
 
         def bg_lab_hover(evt, lab, cursor, text):
             lab.setText(text)
@@ -528,12 +534,13 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
 
         schedule = schedule or {}
         if not rem:
-            name_widget = QLabel(schedule.get('name'))
+            name_widget = QLabel(capitalize_phrase(schedule.get('name')))
         else:
             name_widget = QLineEdit()
-            name_widget.setText(schedule.get('name', "schedule name"))
+            name_widget.setText(capitalize_phrase(schedule.get('name', "Schedule Name")))
             name_widget.textChanged.connect(lambda evt, val_fn=self.validate_sched_name, pos=0: validate_all(evt, val_fn, pos))
         name_widget.setFixedWidth(150)
+        name_widget.setAlignment(Qt.AlignCenter)
         value_edit_box = QLineEdit()
         value_edit_box.setFixedWidth(50)
         percent_button = QRadioButton('Percent')
@@ -567,7 +574,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 get("bg", "rgba" + hex_to_rgb("FFE11A", alpha="60%"))
             )
         )
-        answer_key_label = QLabel("Answer key (1-9)")
+        answer_key_label = QLabel("Key [1-9]")
         answer_key_input = keypress_capture_field('123456789')
         answer_key_input.textChanged.connect(lambda evt, val_fn=self.validate_sched_anskey, pos=5: validate_all(evt, val_fn, pos))
         remove_button = QPushButton()
@@ -599,7 +606,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             "id":
                 sched_id,
             "name":
-                lambda: name_widget.text(),
+                lambda: capitalize_phrase(name_widget.text()),
             "value":
                 lambda: value_edit_box.text(),
             "method":
