@@ -29,7 +29,7 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha
+from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image
 from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
 
 
@@ -227,38 +227,38 @@ class TextManager:
             # and go through all IR3X notes and replace the file names
             # or make a second copy of the replacement for the current note to update, then delete when
             # it is answered, there are options, but this is not taht imperative right now
-            elif key == "WIP":
-                selected = self.image_list_widget.selectedItems()
-                if selected and len(selected) == 1:
-                    selected_image = selected[0].data(Qt.UserRole)
-                    filename = selected_image['src']
-                    image_data, _, image_url = self._grab_images_from_clipboard(
-                    )
-                    if len(image_data) == 1:
-                        conf_box = QMessageBox()
-                        conf_box.setText(
-                            "Do you want to replace all instances of this image with the new one from the clipboard?"
-                        )
-                        conf_box.setStandardButtons(
-                            QMessageBox.Yes | QMessageBox.No
-                        )
-                        conf_box.setDefaultButton(QMessageBox.Yes)
-                        ret = conf_box.exec_()
-                        if ret:
-                            self._save_image_to_col(
-                                image_data[0], filename, replace=True
-                            )
-                            selected_image[
-                                "url"] = image_url[0] if image_url else None
-                            selected[0].setData(Qt.UserRole, selected_image)
-                            self.image_list_widget.update()
-                            update_label()
-                    else:
-                        showInfo(
-                            "There were multiple images on the clipboard, should be only 1."
-                        )
-                else:
-                    showInfo("Can only edit 1 image at a time")
+            # elif key == "WIP":
+            #     selected = self.image_list_widget.selectedItems()
+            #     if selected and len(selected) == 1:
+            #         selected_image = selected[0].data(Qt.UserRole)
+            #         filename = selected_image['src']
+            #         image_data, _, image_url = self._grab_images_from_clipboard(
+            #         )
+            #         if len(image_data) == 1:
+            #             conf_box = QMessageBox()
+            #             conf_box.setText(
+            #                 "Do you want to replace all instances of this image with the new one from the clipboard?"
+            #             )
+            #             conf_box.setStandardButtons(
+            #                 QMessageBox.Yes | QMessageBox.No
+            #             )
+            #             conf_box.setDefaultButton(QMessageBox.Yes)
+            #             ret = conf_box.exec_()
+            #             if ret:
+            #                 self._save_image_to_col(
+            #                     image_data[0], filename, replace=True
+            #                 )
+            #                 selected_image[
+            #                     "url"] = image_url[0] if image_url else None
+            #                 selected[0].setData(Qt.UserRole, selected_image)
+            #                 self.image_list_widget.update()
+            #                 update_label()
+            #         else:
+            #             showInfo(
+            #                 "There were multiple images on the clipboard, should be only 1."
+            #             )
+            #     else:
+            #         showInfo("Can only edit 1 image at a time")
             else:
                 return _orig(evt)
 
@@ -467,8 +467,9 @@ class TextManager:
                     default=pretty_date()
                 ) if not skip_captions else (pretty_date(), 1)
             if ret == 1:
+                extension = os.path.splitext(image_urls[index])[-1][1:].lower()
                 filepath, identifier = self._save_image_to_col(
-                    image, caption[:50]
+                    image, caption[:50], extension
                 )
                 images_templ += self._templ_image(
                     filepath,
@@ -593,33 +594,25 @@ class TextManager:
         template += "</a></div>" if url else "</div>"
         return template.format(**content)
 
-    def _save_image_to_col(
-        self, image_data, filename, quality=85, replace=False
-    ):
+    def _save_image_to_col(self, image_data, filename, ext):
         media = mw.col.media
         identifier = None
         filepath = media.stripIllegal(filename)
-        if exists(join(media.dir(), filepath)) and replace:
-            replacement_worked = False
+        if exists(join(media.dir(), filepath)):
             temp_filename = join(media.dir(), filename + "__IRXTEMP")
             os.rename(join(media.dir(), filepath), temp_filename)
-        try:
-            identifier = checksum(image_data)
-            media.writeData(filepath, image_data)
-            replacement_worked = True
-        except TypeError:
+        if not isinstance(image_data, str): #it's already a QImage
             buf = QBuffer()
             buf.open(QBuffer.ReadWrite)
-            filepath += ".png" if filepath[-4:] != ".png" and not replace else ""
-            image_data.save(buf, "PNG", quality=quality)
-            identifier = checksum(buf.data())
-            media.writeData(filepath, buf.data())
-            replacement_worked = True
-        if replace:
-            if replacement_worked:
-                os.remove(temp_filename)
-            else:
-                os.rename(temp_filename, temp_filename[:-9])
+            image_data.save(buf, ext, quality=100)
+            image_data = buf.data()
+        compressed_data, quality = compress_image(image_data, ext)
+        if quality != 100:
+            tooltip('Compressed {} using {}% quality.'.format(filename, quality))
+        identifier = checksum(compressed_data)
+        ext_ending = ".{}".format(ext)
+        filepath += ext_ending if filepath[-len(ext_ending):] != ext_ending else ""
+        media.writeData(filepath, compressed_data)
         return filepath, identifier
 
     def _grab_images_from_clipboard(self):
@@ -635,7 +628,7 @@ class TextManager:
                     'a', {
                         'href':
                             re.compile(
-                                r"wikipedia\.org/wiki/File:",
+                                r"wiki[pm]edia\.org/wiki/File:",
                                 flags=re.IGNORECASE
                             )
                     }
