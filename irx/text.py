@@ -222,43 +222,6 @@ class TextManager:
                             item
                         )
                     self.image_list_widget.update()
-            # This does not work yet. The image is replaced but can't get it to update the view.
-            # One solution would be to actually save the new image under a new name
-            # and go through all IR3X notes and replace the file names
-            # or make a second copy of the replacement for the current note to update, then delete when
-            # it is answered, there are options, but this is not taht imperative right now
-            # elif key == "WIP":
-            #     selected = self.image_list_widget.selectedItems()
-            #     if selected and len(selected) == 1:
-            #         selected_image = selected[0].data(Qt.UserRole)
-            #         filename = selected_image['src']
-            #         image_data, _, image_url = self._grab_images_from_clipboard(
-            #         )
-            #         if len(image_data) == 1:
-            #             conf_box = QMessageBox()
-            #             conf_box.setText(
-            #                 "Do you want to replace all instances of this image with the new one from the clipboard?"
-            #             )
-            #             conf_box.setStandardButtons(
-            #                 QMessageBox.Yes | QMessageBox.No
-            #             )
-            #             conf_box.setDefaultButton(QMessageBox.Yes)
-            #             ret = conf_box.exec_()
-            #             if ret:
-            #                 self._save_image_to_col(
-            #                     image_data[0], filename, replace=True
-            #                 )
-            #                 selected_image[
-            #                     "url"] = image_url[0] if image_url else None
-            #                 selected[0].setData(Qt.UserRole, selected_image)
-            #                 self.image_list_widget.update()
-            #                 update_label()
-            #         else:
-            #             showInfo(
-            #                 "There were multiple images on the clipboard, should be only 1."
-            #             )
-            #     else:
-            #         showInfo("Can only edit 1 image at a time")
             else:
                 return _orig(evt)
 
