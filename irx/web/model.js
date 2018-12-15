@@ -2,11 +2,19 @@
 var imagesSidebar, stylesVisible, highlightsVisible, removedVisible;
 
 function setupIrx() {
-    setupIrxHudBar()
+    setupIrxHudBar();
+    fixIrxImageLinks();
     toggleStyles(true, true);
     toggleHighlights(true, true);
     toggleImagesSidebar(true, true);
     toggleRemoved(false, true);
+}
+
+function fixIrxImageLinks() {
+    var irxImages = document.querySelectorAll("img[irx-src]");
+    for (var i = 0; i < irxImages.length; i++) {
+        irxImages[i].src = irxImages[i].getAttribute("irx-src");
+    }
 }
 
 function irxOnImgError(image) {
@@ -450,7 +458,7 @@ function attachEventsToIrxLinks() {
 
 function hoverState(irxnid, state) {
     var links = document.querySelectorAll("a[href*='" + irxnid + "']");
-    var linkStyle = state == "on" ? 'color: magenta' : '';
+    var linkStyle = state == "on" ? 'color: #37b8eb' : '';
     for (var k = 0; k < links.length; k++) {
         links[k].setAttribute('style', linkStyle);
     }

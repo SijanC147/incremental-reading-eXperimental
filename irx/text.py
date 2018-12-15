@@ -118,7 +118,7 @@ class TextManager:
                                 }
                             ).text,
                         "src":
-                            div.findChild('img').get('src'),
+                            div.findChild('img').get('irx-src'),
                         "url":
                             div.findAll('a')[1].get('href')
                             if len(div.findAll('a')) == 2 else None,
@@ -541,7 +541,7 @@ class TextManager:
             "caption": caption,
             "url": url,
         }
-        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}' onerror='irxOnImgError(this);'/>"
+        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{src}' irx-src='{src}' onerror='irxOnImgError(this);'/>"
         template += "</a><a href='{url}'>" if url else "</a>"
         template += "<span class='irx-caption'>{caption}</span>"
         template += "</a></div>" if url else "</div>"
