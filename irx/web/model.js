@@ -9,6 +9,12 @@ function setupIrx() {
     toggleRemoved(false, true);
 }
 
+function irxOnImgError(image) {
+    image.onerror = "";
+    image.src = "_irx_img_fallback.png";
+    return true;
+}
+
 function setupIrxHudBar() {
     var stylesSwitch = document.getElementById("irx-hud-styles");
     stylesSwitch.setAttribute('onclick', 'toggleStyles();')

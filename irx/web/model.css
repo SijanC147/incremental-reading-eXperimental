@@ -2,8 +2,16 @@
     font-family: arial;
     font-size: 20px;
     text-align: left;
+}
+
+
+
+/* IRX STYLES */
+.card {
     color: #131516;
     background-color: #F2F3F4;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .card img {
@@ -12,33 +20,28 @@
     margin-right: auto;
 }
 
-/* IRX STYLES */
-
-/* //div.irx-title  {
-//    position: relative;
-//    left: 0;
-//    top: -15px; 
-//} */
-
 div.irx-title {
-    height:50px;
+    font-size: 22px;
+    height:30px;
     width:100%;
+    line-height: 35px;
+    vertical-align: middle;
     position:fixed;
-    top:-15px;
+    top: 0;
     background-color: #F2F3F4;
 }
 
 div.irx-grad {
-    height:100px;
+    height:80px;
     width:100%;
-    position:fixed;
-    top:35px;
-    background: -webkit-gradient(linear, left bottom, left top, color-stop(0%, rgba(242, 243, 244, 0)), color-stop(95%,rgba(242, 243, 244,1)));
-    background: -webkit-linear-gradient(to bottom,  rgba(242, 243, 244, 0) 0%, rgba(242, 243, 244,1) 90%);
+    position:fixed; 
+    top:30px;
+    background: -webkit-gradient(linear, left bottom, left top, color-stop(0%,rgba(242, 243, 244, 0)), color-stop(95%,rgba(242, 243, 244,1)));
+    background: -webkit-linear-gradient(to bottom,  rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
     background: linear-gradient(to bottom,  rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
 }
 
-div.irx-footer {
+div.irx-overlay-controls {
     width:100%;
     height: 20px;
     position: fixed;
@@ -47,7 +50,7 @@ div.irx-footer {
     background-color: white;
 }
 
-div.irx-footer div[id^='irx-hud'] {
+div.irx-overlay-controls div[id^='irx-hud'] {
     font-size: 14px;
     text-align: center;
     vertical-align: middle;
@@ -55,24 +58,22 @@ div.irx-footer div[id^='irx-hud'] {
     float: left;
     height:100%;
     width: 25%;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
-div.irx-footer div[id^='irx-hud']:hover {
+div.irx-overlay-controls div[id^='irx-hud']:hover {
     cursor: pointer;
     -webkit-transition-duration: 0.2s;
     transition-duration: 0.2s;
 }
 
-div.irx-footer div[id^='irx-hud'][irx-toggle~="off"]:hover {
+div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="off"]:hover {
     background-color: #96CEB4 !important;
 }
-div.irx-footer div[id^='irx-hud'][irx-toggle~="on"]:hover {
+div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="on"]:hover {
     background-color: #FFAD9F !important;
 }
 
-div.irx-footer div[id^='irx-hud'][irx-toggle~="off"] {
+div.irx-overlay-controls div[id^='irx-hud'][irx-toggle~="off"] {
     opacity: .5;
 }
 
@@ -106,7 +107,9 @@ a[href^="irxnid"] {
 }
 
 div.irx-content {
-    margin-top: 100px;
+    margin-top: 80px;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .irx-row:after {
@@ -118,6 +121,8 @@ div.irx-content {
 .irx-text {
     float: left;
     width: 70%;
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
 }
 
 .irx-images {
@@ -128,7 +133,8 @@ div.irx-content {
     height: 90%;
     max-width: 25%;
     font-size: 14px;
-    margin-top: -65px
+    margin-top: -65px;
+    overflow-x: hidden;
 }
 
 .irx-images img {
@@ -138,13 +144,17 @@ div.irx-content {
     margin-bottom: 3px;
 }
 
-.irx-images img:hover {
-    box-shadow: 13px 32px 36px -14px hsla(0, 0%, 70%, 0.1);
-    position: relative;
-    top: -2px;
+.irx-images img:not([src^="_irx_img_fallback"]) {
+    box-shadow: 0px 0px 8px 0px rgba(0,0,0,.1);
+}
+
+.irx-images img:not([src^="_irx_img_fallback"]):hover {
+    box-shadow: 0px 0px 8px 0px rgba(0,0,0,.1);
     cursor: pointer;
+    -webkit-transform: scale(1.01,1.01);
+    transform: scale(1.01,1.01);
     -webkit-transition: all .1s ease-in;
-    duration: all .1s ease-in;
+    transition: all .1s ease-in;
 }
 
 .irx-images div {
@@ -155,7 +165,7 @@ div.irx-content {
     font-size: 16px;
     font-style: italic;
     background-color: lavenderblush;
-    color: deeppink
+    color: deeppink;
 }
 
 div.irx-removed-vis {

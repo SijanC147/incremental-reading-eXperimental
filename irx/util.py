@@ -20,7 +20,7 @@ from aqt import mw
 from aqt.utils import showInfo
 
 
-def irx_data_file(filename):
+def irx_file_path(filename):
     return os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "data", filename
     )
