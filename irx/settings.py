@@ -76,6 +76,61 @@ class SettingsManager():
             tooltip("<b>IR3X</b>: Settings updated.")
 
         self.duplicate_controls = self.check_for_duplicate_controls()
+        self.actions_by_category = {
+            "General Controls":
+                [
+                    "remove",
+                    "undo",
+                    "done (suspend)",
+                    "next card",
+                    "show help",
+                    "show reading list",
+                    "show image manager",
+                ],
+            "Text Fomatting": [
+                "bold",
+                "underline",
+                "italic",
+                "strikethrough",
+            ],
+            "Importing Images":
+                [
+                    "extract image",
+                    "extract image (skip caption)",
+                    "add image",  #todo rename this to import image
+                    "add image (skip caption)",
+                ],
+            "Visual Elements":
+                [
+                    "toggle images",
+                    "toggle formatting",
+                    "toggle removed text",
+                    "toggle extracts",
+                ],
+            "Image Manager":
+                [
+                    "toggle help",
+                    "edit image caption",
+                    "mark image(s) for deletion",
+                    "take image(s) (for reordering)",
+                    "place image(s) above (for reordering)",
+                    "place image(s) below (for reordering)",
+                    "submit image changes",
+                ],
+            "Navigation Controls":
+                [
+                    "zoom in",
+                    "zoom out",
+                    "line up",
+                    "line down",
+                    "page up",
+                    "page down",
+                ],
+            "Quick Keys":
+                self.quick_keys_action_format().keys(),
+            "Scheduling (Highlighting)":
+                self.schedule_keys_action_format().keys()
+        }
         if self.duplicate_controls:
             self.show_help()
         addHook('unloadProfile', self.save_settings)
@@ -113,7 +168,7 @@ class SettingsManager():
     def check_for_duplicate_controls(self):
         all_irx_actions = self.get_all_registered_irx_actions()
         keys = sum(
-            [values.split(" ") for values in all_irx_actions.values()], []
+            [values.split(" ") for key, values in all_irx_actions.items() if key not in IMAGE_MANAGER_CONTROLS.keys()], []
         )
         duplicate_controls = list(
             set([key for key in keys if keys.count(key) > 1])
@@ -139,73 +194,11 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         return actions_keys_index
 
     def show_help(self):
-        action_categories = {
-            "General Controls":
-                [
-                    "remove",
-                    "undo",
-                    "done (suspend)",
-                    "next card",
-                    "show help",
-                    "show reading list",
-                    "show image manager",
-                ],
-            "Text Fomatting": [
-                "bold",
-                "underline",
-                "italic",
-                "strikethrough",
-            ],
-            "Text Highlighting (Extracts)":
-                [
-                    # "extract important",
-                    # "extract complimentary",
-                    # "extract important (and edit)",
-                    # "extract complimentary (and edit)",
-                ],
-            "Importing Images":
-                [
-                    "extract image",
-                    "extract image (skip caption)",
-                    "add image",  #todo rename this to import image
-                    "add image (skip caption)",
-                ],
-            "Visual Elements":
-                [
-                    "toggle images",
-                    "toggle formatting",
-                    "toggle removed text",
-                    "toggle extracts",
-                ],
-            "Image Manager":
-                [
-                    "edit image caption",
-                    "mark image(s) for deletion",
-                    "take image(s) (for reordering)",
-                    "place image(s) above (for reordering)",
-                    "place image(s) below (for reordering)",
-                    "submit image changes",
-                ],
-            "Navigation Controls":
-                [
-                    "zoom in",
-                    "zoom out",
-                    "line up",
-                    "line down",
-                    "page up",
-                    "page down",
-                ],
-            "Quick Keys":
-                self.quick_keys_action_format().keys(),
-            "Scheduling (Highlighting)":
-                self.schedule_keys_action_format().keys()
-        }
-
         help_dialog = QDialog(mw)
         help_cat_boxes = [
             self.make_help_group(
                 cat, acts, self.get_all_registered_irx_actions()
-            ) for cat, acts in action_categories.items() if acts
+            ) for cat, acts in self.actions_by_category.items() if acts
         ]
         help_cat_boxes = [h for h in help_cat_boxes if h]
         help_layout = QVBoxLayout()
@@ -236,7 +229,11 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
 
         help_dialog.exec_()
 
-    def make_help_group(self, category, actions, keys_index):
+    def make_help_group(self, category, actions=None, keys_index=None):
+        keys_index = keys_index or self.get_all_registered_irx_actions()
+        actions = actions or self.actions_by_category.get(category)
+        if not actions:
+            return False
         controls_layout = QVBoxLayout()
         active_actions = [a for a in actions if a in keys_index.keys()] 
         for action in active_actions:
