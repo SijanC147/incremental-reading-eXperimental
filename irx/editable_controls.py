@@ -30,11 +30,6 @@ REVIEWER_CONTROLS = {
     "page up": "PgUp",
     "page down": "PgDown",
     "next card": "Shift+Space"
-    ############################### NO LONGER REQUIRED HERE.
-    # "extract important": "1",
-    # "extract complimentary": "2",
-    # "extract important (and edit)": "Alt+1",
-    # "extract complimentary (and edit)": "Alt+2",
 }
 
 IMAGE_MANAGER_CONTROLS = {
