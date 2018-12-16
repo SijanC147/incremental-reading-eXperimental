@@ -16,10 +16,6 @@ REVIEWER_CONTROLS = {
     "add image (skip caption)": "Shift+@",
     "extract image": "m",
     "extract image (skip caption)": "q",
-    # "extract important": "1",
-    # "extract complimentary": "2",
-    # "extract important (and edit)": "Alt+1",
-    # "extract complimentary (and edit)": "Alt+2",
     "bold": "Ctrl+b",
     "underline": "Meta+o",
     "italic": "Ctrl+i",
@@ -34,20 +30,19 @@ REVIEWER_CONTROLS = {
     "page up": "PgUp",
     "page down": "PgDown",
     "next card": "Shift+Space"
+    ############################### NO LONGER REQUIRED HERE.
+    # "extract important": "1",
+    # "extract complimentary": "2",
+    # "extract important (and edit)": "Alt+1",
+    # "extract complimentary (and edit)": "Alt+2",
 }
 
 IMAGE_MANAGER_CONTROLS = {
+    "toggle help": "?",
     "edit image caption": "e",
     "mark image(s) for deletion": "d",
     "take image(s) (for reordering)": "t",
     "place image(s) above (for reordering)": "a",
     "place image(s) below (for reordering)": "b",
     "submit image changes": "Enter",
-}
-
-HIGHLIGHT_COLORS = {
-    "soon": ("#FFE11A", "#000000"),
-    "later": ("#FD7400", "#000000"),
-    "card": ("#1F8A70", "#000000"),
-    # "irx_extract": ("#FF971A", "#000000"),
 }

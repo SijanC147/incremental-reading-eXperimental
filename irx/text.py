@@ -15,7 +15,7 @@ from cStringIO import StringIO
 from PyQt4.QtGui import (
     QApplication, QImage, QAbstractItemView, QDialog, QDialogButtonBox, QPixmap,
     QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QVBoxLayout, QLabel,
-    QBrush, QColor, QMessageBox
+    QBrush, QColor, QMessageBox, QProgressDialog
 )
 from PyQt4.QtWebKit import QWebPage
 from PyQt4.QtCore import Qt, QBuffer
@@ -30,7 +30,7 @@ from aqt.utils import getText, showInfo, tooltip
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
 from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image
-from irx.editable_controls import HIGHLIGHT_COLORS, IMAGE_MANAGER_CONTROLS
+from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 
 
 class TextManager:
@@ -162,10 +162,14 @@ class TextManager:
         image_label = QLabel()
         image_label.setFixedSize(300, 250)
         image_label.setAlignment(Qt.AlignCenter)
+        image_manager_help_box = mw.readingManager.settingsManager.make_help_group('Image Manager')
+        image_manager_help_box.setFixedSize(300, 250)
+        image_manager_help_box.hide()
 
         def update_label(clear=False):
             selected = self.image_list_widget.selectedItems()
             if len(selected) == 1:
+                image_manager_help_box.hide()
                 image = selected[0].data(Qt.UserRole)
                 image_label.setPixmap(
                     QPixmap(image["thumb"]).scaled(
@@ -173,13 +177,24 @@ class TextManager:
                         Qt.KeepAspectRatio
                     )
                 )
+                image_label.show()
             else:
-                image_label.clear()
+                image_label.hide()
+                image_manager_help_box.show()
             image_label.update()
 
         def key_handler(evt, _orig):
             key = unicode(evt.text())
-            if key == IMAGE_MANAGER_CONTROLS["mark image(s) for deletion"]:
+            if key == IMAGE_MANAGER_CONTROLS["toggle help"] or key in [k for k in REVIEWER_CONTROLS["show help"].split(" ") if len(k) == 1]:
+                selected = self.image_list_widget.selectedItems()
+                if len(selected) == 1:
+                    if image_label.isHidden():
+                        image_manager_help_box.hide()
+                        image_label.show()
+                    else:
+                        image_label.hide()
+                        image_manager_help_box.show()
+            elif key == IMAGE_MANAGER_CONTROLS["mark image(s) for deletion"]:
                 for selected in self.image_list_widget.selectedItems():
                     if selected.background() == std_bg:
                         selected.setBackground(del_bg)
@@ -237,6 +252,7 @@ class TextManager:
         dialog = QDialog(mw)
         layout = QHBoxLayout()
         layout.addStretch()
+        layout.addWidget(image_manager_help_box)
         layout.addWidget(image_label)
         layout.addWidget(self.image_list_widget)
         dialog.setLayout(layout)
@@ -580,7 +596,13 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             soup = bs(mime_data.html())
-            for img in soup.findAll('img'):
+            soup_imgs = soup.findAll('img')
+            if soup_imgs:
+                progress = QProgressDialog("Getting images from clipboard", "Cancel", 1, len(soup_imgs), mw)
+                progress.setWindowModality(Qt.WindowModal)
+            for i, img in enumerate(soup_imgs):
+                progress.setValue(i)
+                possible_better_caption = None
                 parent = img.findParent(
                     'a', {
                         'href':
@@ -595,6 +617,11 @@ class TextManager:
                     media_path = wiki_soup.findAll(
                         'div', attrs={"id": "file"}
                     )[0].findChild('a').get('href')
+                    media_desc = wiki_soup.findAll(
+                        'td', attrs={"class": "description"}
+                    )
+                    if media_desc:
+                        possible_better_caption = media_desc[0].text
                 else:
                     media_path = img.get('src')
                 img_data = None
@@ -617,6 +644,16 @@ class TextManager:
                 if img_data:
                     image_data.append(img_data)
                     image_urls.append(media_path)
+                    if possible_better_caption:
+                        tmp_image_captions = sum([[possible_better_caption,image_captions[i]] if t==i else [image_captions[t]] if t<len(image_captions) else [""] for t in range(len(image_data))], [])
+                        if len(tmp_image_captions) < len(image_captions):
+                            image_captions = tmp_image_captions + image_captions[len(tmp_image_captions)-1:]
+                        else:
+                            image_captions = tmp_image_captions
+                if progress.wasCanceled():
+                    break;
+            if soup_imgs:
+                progress.setValue(len(soup_imgs))
             if not image_data:
                 showInfo("Could not find any images to extract")
         else:

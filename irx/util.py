@@ -120,7 +120,7 @@ def compress_image(img_data, extension, max_size=None):
     compressed_data = img_data
     save_size = len(img_data)
     compression_ratio = round(len(compressed_data) / len(img_data), 4)
-    while int(compression_ratio) == 1 and extension.lower() != "gif":
+    while save_size > max_size and int(compression_ratio) == 1 and extension.lower() != "gif":
         quality = 100
         step = max(ceil(len(img_data) / 1024 / 1024), 15)
         while save_size > max_size and quality != 50:
@@ -135,7 +135,7 @@ def compress_image(img_data, extension, max_size=None):
                 compressed_data = buf.data()
             buf.close()
         compression_ratio = round(len(compressed_data) / len(img_data), 4)
-        if int(compression_ratio) == 1:
+        if int(compression_ratio) == 1 and save_size > max_size:
             buf = QBuffer()
             buf.open(QBuffer.ReadWrite)
             tmp = tmp.scaled(tmp.width() / 2, tmp.height() / 2)
