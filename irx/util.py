@@ -25,10 +25,11 @@ def irx_file_path(filename):
         os.path.dirname(os.path.abspath(__file__)), "data", filename
     )
 
-
 def capitalize_phrase(phrase):
     return " ".join([w.capitalize() for w in phrase.split(" ")])
 
+def pretty_byte_value(byte_val):
+    return "{0}K".format(int(byte_val / 1024)) if byte_val < 972800 else "{0:.1f}M".format(byte_val / 1024 / 1024)
 
 def compress_image(img_data, extension, max_size=None):
     max_size = max_size or mw.readingManager.settings.get(

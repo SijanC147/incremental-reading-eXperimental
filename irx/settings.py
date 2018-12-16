@@ -16,7 +16,7 @@ from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
     QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor,
-    QIcon, QLayout
+    QIcon, QLayout, QSlider
 )
 
 from anki.hooks import addHook
@@ -26,7 +26,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase
+    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase, pretty_byte_value
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -121,7 +121,7 @@ class SettingsManager():
         if duplicate_controls:
             showInfo(
                 """
-You made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
+IR3X made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
 I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
 Review your <code>editable_controls.py</code> file, quick keys settings and/or schedule answer keys. <br/><br/>\
 """,
@@ -305,12 +305,15 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
 
         dialog.setLayout(main_layout)
         dialog.setWindowTitle('IR3X Settings')
-        dialog.exec_()
-
+        
+        if not dialog.exec_():
+            return
+        
         self.settings['zoomStep'] = self.zoomStepSpinBox.value() / 100.0
         self.settings['generalZoom'] = self.generalZoomSpinBox.value() / 100.0
         self.settings['lineScrollFactor'] = self.lineStepSpinBox.value() / 100.0
         self.settings['pageScrollFactor'] = self.pageStepSpinBox.value() / 100.0
+        self.settings['maxImageBytes'] = self.compression_slider_pref.value()
         test_caption_format = pretty_date(
             self.image_caption_edit_box.text(), 'invalid'
         )
@@ -318,6 +321,235 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         ) if test_caption_format != 'invalid' else self.settings['captionFormat']
 
         mw.viewManager.resetZoom(mw.state)
+
+    def create_image_caption_group_box(self):
+        parent_layout = QVBoxLayout()
+
+        compression_layout = QHBoxLayout()
+        compression_label = QLabel("Max Size")
+        self.compression_slider_pref = QSlider(Qt.Horizontal)
+        self.compression_slider_pref.setMinimum(102400) # 100K
+        self.compression_slider_pref.setMaximum(5242880) # 5M
+        self.compression_slider_pref.setSingleStep(51200) # 50K
+        self.compression_slider_pref.setPageStep(102400) # 100K
+        self.compression_slider_pref.setFixedWidth(250)
+        self.compression_slider_pref.setTickPosition(QSlider.TicksBelow)
+        self.compression_slider_pref.setTickInterval(1048576)
+        self.compression_slider_pref.setValue(self.settings["maxImageBytes"])
+
+        slider_value_label = QLabel(pretty_byte_value(self.compression_slider_pref.value()))
+        slider_value_label.setFixedWidth(40)
+        compression_layout.addWidget(compression_label)
+        compression_layout.addStretch()
+        compression_layout.addWidget(self.compression_slider_pref)
+        compression_layout.addWidget(slider_value_label)
+        slider_value_label.setAlignment(Qt.AlignCenter)
+        self.compression_slider_pref.valueChanged.connect(lambda evt, lab=slider_value_label: lab.setText(pretty_byte_value(evt)))
+
+        caption_format_layout = QHBoxLayout()
+        caption_format_label = QLabel('Auto-Caption')
+        caption_format_layout.addWidget(caption_format_label)
+        caption_format_layout.addStretch()
+        self.image_caption_edit_box = QLineEdit()
+        self.image_caption_edit_box.setText(self.settings['captionFormat'])
+        self.image_caption_edit_box.setFixedWidth(250)
+        help_button = QPushButton("?")
+        help_button.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("http://strftime.org/"))
+        )
+        caption_format_layout.addWidget(self.image_caption_edit_box)
+        caption_format_layout.addWidget(help_button)
+
+        caption_preview_layout = QVBoxLayout()
+        caption_preview_label = QLabel()
+        caption_preview_label.setAlignment(Qt.AlignCenter)
+        caption_preview_layout.addWidget(caption_preview_label)
+        invalid_format_msg = "<font color='red'><i>Invalid Format (won't save)</i></font>"
+        def update_caption_preview(templ_format):
+            caption_preview_label.setText(
+                pretty_date(templ_format, invalid=invalid_format_msg)
+            )
+            caption_preview_label.update()
+        self.image_caption_edit_box.textChanged.connect(update_caption_preview)
+
+        parent_layout.addLayout(compression_layout)
+        parent_layout.addLayout(caption_format_layout)
+        parent_layout.addStretch()
+        parent_layout.addLayout(caption_preview_layout)
+
+        group_box = QGroupBox('Image')
+        group_box.setLayout(parent_layout)
+        update_caption_preview(self.image_caption_edit_box.text())
+
+        return group_box
+
+    def create_zoom_group_box(self):
+        zoomStepLabel = QLabel('Zoom Step')
+        zoomStepPercentLabel = QLabel('%')
+        generalZoomLabel = QLabel('General Zoom')
+        generalZoomPercentLabel = QLabel('%')
+
+        self.zoomStepSpinBox = QSpinBox()
+        self.zoomStepSpinBox.setMinimum(5)
+        self.zoomStepSpinBox.setMaximum(100)
+        self.zoomStepSpinBox.setSingleStep(5)
+        zoomStepPercent = round(self.settings['zoomStep'] * 100)
+        self.zoomStepSpinBox.setValue(zoomStepPercent)
+
+        self.generalZoomSpinBox = QSpinBox()
+        self.generalZoomSpinBox.setMinimum(10)
+        self.generalZoomSpinBox.setMaximum(200)
+        self.generalZoomSpinBox.setSingleStep(10)
+        generalZoomPercent = round(self.settings['generalZoom'] * 100)
+        self.generalZoomSpinBox.setValue(generalZoomPercent)
+
+        zoomStepLayout = QHBoxLayout()
+        zoomStepLayout.addWidget(zoomStepLabel)
+        zoomStepLayout.addStretch()
+        zoomStepLayout.addWidget(self.zoomStepSpinBox)
+        zoomStepLayout.addWidget(zoomStepPercentLabel)
+
+        generalZoomLayout = QHBoxLayout()
+        generalZoomLayout.addWidget(generalZoomLabel)
+        generalZoomLayout.addStretch()
+        generalZoomLayout.addWidget(self.generalZoomSpinBox)
+        generalZoomLayout.addWidget(generalZoomPercentLabel)
+
+        layout = QVBoxLayout()
+        layout.addLayout(zoomStepLayout)
+        layout.addLayout(generalZoomLayout)
+        layout.addStretch()
+
+        groupBox = QGroupBox('Zoom')
+        groupBox.setLayout(layout)
+
+        return groupBox
+
+    def create_scroll_group_box(self):
+        lineStepLabel = QLabel('Line Step')
+        lineStepPercentLabel = QLabel('%')
+        pageStepLabel = QLabel('Page Step')
+        pageStepPercentLabel = QLabel('%')
+
+        self.lineStepSpinBox = QSpinBox()
+        self.lineStepSpinBox.setMinimum(5)
+        self.lineStepSpinBox.setMaximum(100)
+        self.lineStepSpinBox.setSingleStep(5)
+        self.lineStepSpinBox.setValue(
+            round(self.settings['lineScrollFactor'] * 100)
+        )
+
+        self.pageStepSpinBox = QSpinBox()
+        self.pageStepSpinBox.setMinimum(5)
+        self.pageStepSpinBox.setMaximum(100)
+        self.pageStepSpinBox.setSingleStep(5)
+        self.pageStepSpinBox.setValue(
+            round(self.settings['pageScrollFactor'] * 100)
+        )
+
+        lineStepLayout = QHBoxLayout()
+        lineStepLayout.addWidget(lineStepLabel)
+        lineStepLayout.addStretch()
+        lineStepLayout.addWidget(self.lineStepSpinBox)
+        lineStepLayout.addWidget(lineStepPercentLabel)
+
+        pageStepLayout = QHBoxLayout()
+        pageStepLayout.addWidget(pageStepLabel)
+        pageStepLayout.addStretch()
+        pageStepLayout.addWidget(self.pageStepSpinBox)
+        pageStepLayout.addWidget(pageStepPercentLabel)
+
+        layout = QVBoxLayout()
+        layout.addLayout(lineStepLayout)
+        layout.addLayout(pageStepLayout)
+        layout.addStretch()
+
+        groupBox = QGroupBox('Scroll')
+        groupBox.setLayout(layout)
+
+        return groupBox
+
+    def save_settings(self):
+        with open(self.json_path, 'w', encoding='utf-8') as json_file:
+            self.settings["irx_controls"] = {}
+            json.dump(self.settings, json_file, indent=4)
+            self.settings["irx_controls"] = self.irx_controls
+
+        updateModificationTime(self.media_dir)
+
+    def load_settings(self):
+        self.defaults = {
+            'zoomStep': 0.1,
+            'generalZoom': 1,
+            'lineScrollFactor': 0.05,
+            'pageScrollFactor': 0.5,
+            'schedLaterMethod': 'percent',
+            'schedLaterRandom': True,
+            'schedLaterValue': 50,
+            'schedSoonMethod': 'percent',
+            'schedSoonRandom': True,
+            'schedSoonValue': 10,
+            'plainText': False,
+            "editExtract": False,
+            "editSource": False,
+            "extractDeck": None,
+            'modelName': 'IR3X',
+            'captionFormat': "%A, %d %B %Y %H:%M",
+            'maxImageBytes': 1048576,
+            'sourceField': 'Source',
+            'textField': 'Text',
+            'titleField': 'Title',
+            'dateField': 'Date',
+            'parentField': 'Parent',
+            'pidField': 'pid',
+            'linkField': 'Link',
+            'imagesField': 'Images',
+            'quickKeys': {},
+            'schedules':
+                {
+                    "1":
+                        {
+                            "id": 1,
+                            "name": "soon",
+                            "value": 10,
+                            "method": "percent",
+                            "random": True,
+                            "anskey": "1",
+                            "bg": "rgba(255, 0, 0, 60%)"
+                        },
+                    "2":
+                        {
+                            "id": 2,
+                            "name": "later",
+                            "value": 50,
+                            "method": "percent",
+                            "random": True,
+                            "anskey": "2",
+                            "bg": "rgba(0, 255, 0, 60%)"
+                        }
+                },
+            'scroll': {},
+            'zoom': {},
+        }
+
+        self.media_dir = os.path.join(mw.pm.profileFolder(), 'collection.media')
+        self.json_path = os.path.join(self.media_dir, '_irx.json')
+
+        if os.path.isfile(self.json_path):
+            with open(self.json_path, encoding='utf-8') as json_file:
+                self.settings = json.load(json_file)
+            self.add_missing_settings()
+        else:
+            self.settings = self.defaults
+
+        self.settings["irx_controls"] = self.irx_controls
+
+    def add_missing_settings(self):
+        for k, v in self.defaults.items():
+            no_sched = (k == "schedules" and not self.settings[k])
+            if (k not in self.settings) or no_sched:
+                self.settings[k] = v
+                self.settings_changed = True
 
     def show_scheduling(self):
         self.schedules = []
@@ -643,7 +875,6 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         bg_label.setStyleSheet(new_style_sheet)
         bg_label.update()
 
-
     def change_color(self, sched_id):
         sched = [s for s in self.schedules if s["id"] == sched_id]
         if not sched:
@@ -674,214 +905,3 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             lambda evt, lab=bg_label: update_color(evt, lab)
         )
         color_picker.exec_()
-
-    def save_settings(self):
-        with open(self.json_path, 'w', encoding='utf-8') as json_file:
-            self.settings["irx_controls"] = {}
-            json.dump(self.settings, json_file, indent=4)
-            self.settings["irx_controls"] = self.irx_controls
-
-        updateModificationTime(self.media_dir)
-
-    def load_settings(self):
-        self.defaults = {
-            'zoomStep': 0.1,
-            'generalZoom': 1,
-            'lineScrollFactor': 0.05,
-            'pageScrollFactor': 0.5,
-            'schedLaterMethod': 'percent',
-            'schedLaterRandom': True,
-            'schedLaterValue': 50,
-            'schedSoonMethod': 'percent',
-            'schedSoonRandom': True,
-            'schedSoonValue': 10,
-            'plainText': False,
-            "editExtract": False,
-            "editSource": False,
-            "extractDeck": None,
-            'modelName': 'IR3X',
-            'captionFormat': "%A, %d %B %Y %H:%M",
-            'maxImageBytes': 1048576,
-            'sourceField': 'Source',
-            'textField': 'Text',
-            'titleField': 'Title',
-            'dateField': 'Date',
-            'parentField': 'Parent',
-            'pidField': 'pid',
-            'linkField': 'Link',
-            'imagesField': 'Images',
-            'quickKeys': {},
-            'schedules':
-                {
-                    "1":
-                        {
-                            "id": 1,
-                            "name": "soon",
-                            "value": 10,
-                            "method": "percent",
-                            "random": True,
-                            "anskey": "1",
-                            "bg": "rgba(255, 0, 0, 60%)"
-                        },
-                    "2":
-                        {
-                            "id": 2,
-                            "name": "later",
-                            "value": 50,
-                            "method": "percent",
-                            "random": True,
-                            "anskey": "2",
-                            "bg": "rgba(0, 255, 0, 60%)"
-                        }
-                },
-            'scroll': {},
-            'zoom': {},
-        }
-
-        self.media_dir = os.path.join(mw.pm.profileFolder(), 'collection.media')
-        self.json_path = os.path.join(self.media_dir, '_irx.json')
-
-        if os.path.isfile(self.json_path):
-            with open(self.json_path, encoding='utf-8') as json_file:
-                self.settings = json.load(json_file)
-            self.add_missing_settings()
-        else:
-            self.settings = self.defaults
-
-        self.settings["irx_controls"] = self.irx_controls
-
-    def create_image_caption_group_box(self):
-        parent_layout = QVBoxLayout()
-
-        caption_format_layout = QHBoxLayout()
-        caption_format_label = QLabel('Format (uses strftime tokens)')
-        caption_format_layout.addWidget(caption_format_label)
-        caption_format_layout.addStretch()
-        self.image_caption_edit_box = QLineEdit()
-        self.image_caption_edit_box.setText(self.settings['captionFormat'])
-        self.image_caption_edit_box.setFixedWidth(250)
-        help_button = QPushButton("?")
-        help_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("http://strftime.org/"))
-        )
-
-        caption_format_layout.addWidget(self.image_caption_edit_box)
-        caption_format_layout.addWidget(help_button)
-
-        caption_preview_layout = QVBoxLayout()
-        caption_preview_label = QLabel()
-        caption_preview_label.setAlignment(Qt.AlignCenter)
-        caption_preview_layout.addWidget(caption_preview_label)
-
-        invalid_format_msg = "<font color='red'><i>Invalid Format (won't save)</i></font>"
-
-        def update_caption_preview(templ_format):
-            caption_preview_label.setText(
-                pretty_date(templ_format, invalid=invalid_format_msg)
-            )
-            caption_preview_label.update()
-
-        self.image_caption_edit_box.textChanged.connect(update_caption_preview)
-
-        parent_layout.addLayout(caption_format_layout)
-        parent_layout.addStretch()
-        parent_layout.addLayout(caption_preview_layout)
-
-        group_box = QGroupBox('Auto-Image Captioning')
-        group_box.setLayout(parent_layout)
-        update_caption_preview(self.image_caption_edit_box.text())
-
-        return group_box
-
-    def create_zoom_group_box(self):
-        zoomStepLabel = QLabel('Zoom Step')
-        zoomStepPercentLabel = QLabel('%')
-        generalZoomLabel = QLabel('General Zoom')
-        generalZoomPercentLabel = QLabel('%')
-
-        self.zoomStepSpinBox = QSpinBox()
-        self.zoomStepSpinBox.setMinimum(5)
-        self.zoomStepSpinBox.setMaximum(100)
-        self.zoomStepSpinBox.setSingleStep(5)
-        zoomStepPercent = round(self.settings['zoomStep'] * 100)
-        self.zoomStepSpinBox.setValue(zoomStepPercent)
-
-        self.generalZoomSpinBox = QSpinBox()
-        self.generalZoomSpinBox.setMinimum(10)
-        self.generalZoomSpinBox.setMaximum(200)
-        self.generalZoomSpinBox.setSingleStep(10)
-        generalZoomPercent = round(self.settings['generalZoom'] * 100)
-        self.generalZoomSpinBox.setValue(generalZoomPercent)
-
-        zoomStepLayout = QHBoxLayout()
-        zoomStepLayout.addWidget(zoomStepLabel)
-        zoomStepLayout.addStretch()
-        zoomStepLayout.addWidget(self.zoomStepSpinBox)
-        zoomStepLayout.addWidget(zoomStepPercentLabel)
-
-        generalZoomLayout = QHBoxLayout()
-        generalZoomLayout.addWidget(generalZoomLabel)
-        generalZoomLayout.addStretch()
-        generalZoomLayout.addWidget(self.generalZoomSpinBox)
-        generalZoomLayout.addWidget(generalZoomPercentLabel)
-
-        layout = QVBoxLayout()
-        layout.addLayout(zoomStepLayout)
-        layout.addLayout(generalZoomLayout)
-        layout.addStretch()
-
-        groupBox = QGroupBox('Zoom')
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def create_scroll_group_box(self):
-        lineStepLabel = QLabel('Line Step')
-        lineStepPercentLabel = QLabel('%')
-        pageStepLabel = QLabel('Page Step')
-        pageStepPercentLabel = QLabel('%')
-
-        self.lineStepSpinBox = QSpinBox()
-        self.lineStepSpinBox.setMinimum(5)
-        self.lineStepSpinBox.setMaximum(100)
-        self.lineStepSpinBox.setSingleStep(5)
-        self.lineStepSpinBox.setValue(
-            round(self.settings['lineScrollFactor'] * 100)
-        )
-
-        self.pageStepSpinBox = QSpinBox()
-        self.pageStepSpinBox.setMinimum(5)
-        self.pageStepSpinBox.setMaximum(100)
-        self.pageStepSpinBox.setSingleStep(5)
-        self.pageStepSpinBox.setValue(
-            round(self.settings['pageScrollFactor'] * 100)
-        )
-
-        lineStepLayout = QHBoxLayout()
-        lineStepLayout.addWidget(lineStepLabel)
-        lineStepLayout.addStretch()
-        lineStepLayout.addWidget(self.lineStepSpinBox)
-        lineStepLayout.addWidget(lineStepPercentLabel)
-
-        pageStepLayout = QHBoxLayout()
-        pageStepLayout.addWidget(pageStepLabel)
-        pageStepLayout.addStretch()
-        pageStepLayout.addWidget(self.pageStepSpinBox)
-        pageStepLayout.addWidget(pageStepPercentLabel)
-
-        layout = QVBoxLayout()
-        layout.addLayout(lineStepLayout)
-        layout.addLayout(pageStepLayout)
-        layout.addStretch()
-
-        groupBox = QGroupBox('Scroll')
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def add_missing_settings(self):
-        for k, v in self.defaults.items():
-            no_sched = (k == "schedules" and not self.settings[k])
-            if (k not in self.settings) or no_sched:
-                self.settings[k] = v
-                self.settings_changed = True
