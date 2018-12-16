@@ -13,7 +13,7 @@ from aqt.utils import showInfo
 
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
-    mac_fix, db_log, keypress_capture_field
+    mac_fix, db_log, keypress_capture_field, color_picker_label, addComboBoxItem
 )
 from irx.editable_controls import REVIEWER_CONTROLS
 
@@ -93,11 +93,24 @@ class QuickKeys:
 
         keyComboLayout.addWidget(self.regular_key_input)
 
+        last_row_layout = QHBoxLayout()
+        checkbox_layout = QVBoxLayout()
+        col_label_layout = QVBoxLayout()
         self.quickKeyEditExtractCheckBox = QCheckBox('Edit Extracted Note')
         self.quickKeyEditSourceCheckBox = QCheckBox('Edit Source Note')
         self.quickKeyPlainTextCheckBox = QCheckBox('Extract as Plain Text')
+        checkbox_layout.addSpacing(15)
+        checkbox_layout.addWidget(self.quickKeyEditExtractCheckBox)
+        checkbox_layout.addWidget(self.quickKeyEditSourceCheckBox)
+        checkbox_layout.addWidget(self.quickKeyPlainTextCheckBox)
 
-        new_button = QPushButton('New')
+        self.bg_edit_label = color_picker_label()
+        last_row_layout.addLayout(checkbox_layout)
+        last_row_layout.addStretch()
+        col_label_layout.addWidget(self.bg_edit_label)
+        last_row_layout.addLayout(col_label_layout)
+
+        new_button = QPushButton('Clear')
         new_button.clicked.connect(self.clear_quick_keys_dialog)
         new_button.setFocusPolicy(Qt.NoFocus)
         delete_button = QPushButton('Delete')
@@ -117,9 +130,7 @@ class QuickKeys:
         layout.addLayout(destDeckLayout)
         layout.addLayout(noteTypeLayout)
         layout.addLayout(keyComboLayout)
-        layout.addWidget(self.quickKeyEditExtractCheckBox)
-        layout.addWidget(self.quickKeyEditSourceCheckBox)
-        layout.addWidget(self.quickKeyPlainTextCheckBox)
+        layout.addLayout(last_row_layout)
         layout.addLayout(button_layout)
 
         self.dialog.setLayout(layout)
@@ -141,6 +152,7 @@ class QuickKeys:
             self.quickKeyEditExtractCheckBox.setChecked(model['editExtract'])
             self.quickKeyEditSourceCheckBox.setChecked(model['editSource'])
             self.quickKeyPlainTextCheckBox.setChecked(model['plainText'])
+            self.bg_edit_label.set_rgba(model.get('bg'), initial=True)
         else:
             self.clear_quick_keys_dialog()
 
@@ -224,6 +236,7 @@ class QuickKeys:
         self.quickKeyEditExtractCheckBox.setChecked(False)
         self.quickKeyEditSourceCheckBox.setChecked(False)
         self.quickKeyPlainTextCheckBox.setChecked(False)
+        self.bg_edit_label.set_rgba(initial=True)
 
     def delete_quick_key(self):
         quick_key = self.quickKeysComboBox.currentText()
@@ -244,18 +257,20 @@ class QuickKeys:
             'regularKey': self.regular_key_input.text().lower(),
             'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
             'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
-            'plainText': self.quickKeyPlainTextCheckBox.isChecked()
+            'plainText': self.quickKeyPlainTextCheckBox.isChecked(),
+            'bg': self.bg_edit_label.selected_rgba(),
         }
 
         valid_quick_key = self.validate_new_quick_key(quick_key)
         if valid_quick_key:
+            info_msg = "Updated quick key: {}" if valid_quick_key.keys(
+            )[0] in self.settings['quickKeys'].keys(
+            ) else "New quick key added: {}"
             self.settings['quickKeys'].update(valid_quick_key)
             self.refresh_menu_items()
             key_combo = mac_fix(valid_quick_key.keys()[0])
-            showInfo('New shortcut added: %s' % key_combo)
-            curr_count = self.quickKeysComboBox.count()
-            self.quickKeysComboBox.addItem(key_combo)
-            self.quickKeysComboBox.setCurrentIndex(curr_count)
+            showInfo(info_msg.format(key_combo))
+            addComboBoxItem(self.quickKeysComboBox, key_combo)
 
     def validate_new_quick_key(self, quick_key):
         required = ['deckName', 'modelName', 'regularKey']

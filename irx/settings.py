@@ -26,7 +26,7 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase, pretty_byte_value
+    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase, pretty_byte_value, color_picker_label
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -753,11 +753,6 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             del self.schedules[index]
             self.schedules_dialog.adjustSize()
 
-        def bg_lab_hover(evt, lab, cursor, text):
-            lab.setCursor(cursor)
-            lab.setText(text)
-
-
         def validate_all(evt, val_fn, pos, **kwargs):
             for i in range(self.schedules_layout.count()):
                 widget = self.schedules_layout.itemAt(i).itemAt(pos).widget()
@@ -782,30 +777,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         position_button.clicked.connect(value_validator)
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
-        bg_edit_label = QLabel('Sample Text')
-        bg_edit_label.setMouseTracking(True)
-        bg_edit_label.enterEvent = lambda evt, lab=bg_edit_label, cursor=Qt.PointingHandCursor, text="<span style='font-size: 12px'>Click for color<br/>Scroll for opacity</span>": bg_lab_hover(evt, lab, cursor, text)
-        bg_edit_label.leaveEvent = lambda evt, lab=bg_edit_label, cursor=Qt.ArrowCursor, text="Sample Text": bg_lab_hover(evt, lab, cursor, text)
-        bg_edit_label.setFixedWidth(150)
-        bg_edit_label.setFixedHeight(50)
-        bg_edit_label.setAlignment(Qt.AlignCenter)
-        bg_edit_label.mousePressEvent = lambda evt: self.change_color(sched_id)
-        bg_edit_label.wheelEvent = lambda evt: self.change_opacity(evt, sched_id)
-        bg_edit_label.setStyleSheet(
-            """
-        QLabel {{
-            background-color: {bg};
-            text-align: center;
-            border-radius: 15px;
-            padding: 10px;
-            font-size: 18px;
-            font-family: tahoma, geneva, sans-serif;
-        }}
-        """.format(
-                bg=schedule.
-                get("bg", "rgba" + hex_to_rgb("FFE11A", alpha="60%"))
-            )
-        )
+        bg_edit_label = color_picker_label(schedule.get("bg"))
         answer_key_label = QLabel("Key [1-9]")
         answer_key_input = keypress_capture_field('123456789')
         answer_key_input.textChanged.connect(lambda evt, val_fn=self.validate_sched_anskey, pos=5: validate_all(evt, val_fn, pos))
@@ -846,62 +818,10 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
             "random":
                 lambda: random_check_box.isChecked(),
             "bg":
-                lambda: re.search(r"background-color:\s*([^;]+)", bg_edit_label.styleSheet()).groups()[0],
+                lambda: bg_edit_label.selected_rgba(),
             "anskey":
                 lambda: answer_key_input.text(),
             "remove":
                 remove_button
         }
         return layout, sched_dict
-
-    def change_opacity(self, evt, sched_id):
-        sched = [s for s in self.schedules if s["id"] == sched_id]
-        if not sched:
-            raise ValueError("No schedule with ID {} found.".format(sched_id))
-        else:
-            sched = sched[0]
-
-        index = self.schedules.index(sched)
-        layout = self.schedules_layout.itemAt(index)
-        bg_label = layout.itemAt(7).widget()
-        prev_style_sheet = bg_label.styleSheet()
-        find_bg_col = re.search(r"background-color:\s*([^;]+)", prev_style_sheet)
-        prev_bg_col = find_bg_col.groups()[0]
-        curr_opacity = tuple(map(int,re.findall(r'[0-9]+', prev_bg_col)))[3]
-        new_opacity = min(curr_opacity + 1, 100) if evt.delta() > 30 else max(curr_opacity - 1, 30) if evt.delta() < -30 else curr_opacity
-        new_bg_col = prev_bg_col.replace("{}%".format(curr_opacity), "{}%".format(new_opacity))
-        new_style_sheet = prev_style_sheet.replace(prev_bg_col, new_bg_col) 
-        bg_label.setText("{}%".format(new_opacity))
-        bg_label.setStyleSheet(new_style_sheet)
-        bg_label.update()
-
-    def change_color(self, sched_id):
-        sched = [s for s in self.schedules if s["id"] == sched_id]
-        if not sched:
-            raise ValueError("No schedule with ID {} found.".format(sched_id))
-        else:
-            sched = sched[0]
-
-        initial_col = tuple(map(int,re.findall(r'[0-9]+', sched["bg"]())))
-        index = self.schedules.index(sched)
-        layout = self.schedules_layout.itemAt(index)
-        bg_label = layout.itemAt(7).widget()
-
-        def update_color(evt, label):
-            new_col = evt.getRgb()[:3]
-            prev_style_sheet = label.styleSheet()
-            find_bg_col = re.search(
-                r"background-color:\s*([^;]+)", prev_style_sheet
-            )
-            prev_col = find_bg_col.groups()[0]
-            prev_opacity = tuple(map(int,re.findall(r'[0-9]+', prev_col)))[3]
-            new_col = "rgba{}".format(str(new_col).replace(")", ", {}%)".format(prev_opacity))) 
-            new_style_sheet = prev_style_sheet.replace(prev_col, new_col)
-            label.setStyleSheet(new_style_sheet)
-            label.update()
-
-        color_picker = QColorDialog(QColor(*initial_col), mw)
-        color_picker.colorSelected.connect(
-            lambda evt, lab=bg_label: update_color(evt, lab)
-        )
-        color_picker.exec_()

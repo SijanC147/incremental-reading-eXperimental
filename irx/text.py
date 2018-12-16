@@ -71,13 +71,14 @@ class TextManager:
     def remove(self):
         self.format_text_range({"remove": ""})
 
-    def link_note(self, note, schedule_name=""):
-        sched = [s for s in self.settings["schedules"] if self.settings["schedules"][s]["name"] == schedule_name]
-        if not sched:
-            raise ValueError("No schedule found with the following name: {}".format(schedule_name))
+    def link_note(self, note, schedule_name=None, bg_col=None):
+        if schedule_name:
+            sched = [s for s in self.settings["schedules"] if self.settings["schedules"][s]["name"] == schedule_name]
+            if not sched:
+                raise ValueError("No schedule found with the following name: {}".format(schedule_name))
         self.format_text_range(
             {
-                "bg": rgba_percent_to_decimal_alpha(self.settings["schedules"][sched[0]]["bg"]),
+                "bg": rgba_percent_to_decimal_alpha(bg_col or self.settings["schedules"][sched[0]]["bg"]),
                 "link": note.id,
             }
         )
@@ -391,11 +392,7 @@ class TextManager:
                     mw.readingManager.scheduler.answer(
                         cards[0], schedule_name, from_extract=True
                     )
-            self.link_note(new_note, schedule_name)
-            # if schedule_name == 1:
-            #     self.linkNote(new_note, "soon")
-            # elif schedule_name == 2:
-            #     self.linkNote(new_note, "later")
+            self.link_note(new_note, schedule_name=schedule_name)
 
     def extract_image(self, remove_src=False, skip_captions=False):
         if mw.web.selectedText():

@@ -11,13 +11,90 @@ from math import ceil
 from datetime import datetime
 import struct
 
-from PyQt4.QtCore import Qt, QBuffer
-from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage
+from PyQt4.QtCore import Qt, QBuffer, QEvent
+from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QLabel, QColor, QColorDialog, QApplication
 
 from BeautifulSoup import BeautifulSoup as bs4
 
 from aqt import mw
 from aqt.utils import showInfo
+
+DEFAULT_HIGHLIGHT = "rgba(255,225,26,60%)"
+
+
+def color_picker_label(initial=None):
+    initial = initial or DEFAULT_HIGHLIGHT
+
+    def bg_lab_hover(evt, lab, cursor, text):
+        lab.setCursor(cursor)
+        lab.setText(text)
+
+    def set_rgba(bg_label, new_col=None, initial=False):
+        new_col = new_col or DEFAULT_HIGHLIGHT
+        if isinstance(new_col, (str, unicode)):
+            new_col = tuple(map(int, re.findall(r'[0-9]+', new_col)))
+        prev_col_str = bg_label.selected_rgba()
+        prev_rgba_col = tuple(map(int, re.findall(r'[0-9]+', prev_col_str)))
+        prev_opacity = prev_rgba_col[3]
+        new_opacity = new_col[3] if len(new_col) == 4 else prev_opacity
+        new_col_str = "rgba{}".format(
+            str(new_col[:3]).replace(")", ", {}%)".format(new_opacity))
+        )
+        new_style_sheet = bg_label.styleSheet().replace(
+            prev_col_str, new_col_str
+        )
+        if new_opacity != prev_opacity and not initial:
+            bg_label.setText("{}%".format(new_opacity))
+        bg_label.setStyleSheet(new_style_sheet)
+        bg_label.update()
+
+    bg_edit_label = QLabel('Sample Text')
+    bg_edit_label.setMouseTracking(True)
+    bg_edit_label.enterEvent = lambda evt, lab=bg_edit_label, cursor=Qt.PointingHandCursor, text="<span style='font-size: 12px'>Click for color<br/>Scroll for opacity</span>": bg_lab_hover(evt, lab, cursor, text)
+    bg_edit_label.leaveEvent = lambda evt, lab=bg_edit_label, cursor=Qt.ArrowCursor, text="Sample Text": bg_lab_hover(evt, lab, cursor, text)
+    bg_edit_label.setFixedWidth(150)
+    bg_edit_label.setFixedHeight(50)
+    bg_edit_label.setAlignment(Qt.AlignCenter)
+    bg_edit_label.mousePressEvent = lambda evt, lab=bg_edit_label: update_label_color(evt, lab)
+    bg_edit_label.wheelEvent = lambda evt, lab=bg_edit_label: update_label_opacity(evt,lab)
+    bg_edit_label.setStyleSheet(
+        """
+    QLabel {{
+        background-color: {bg};
+        text-align: center;
+        border-radius: 15px;
+        padding: 10px;
+        font-size: 18px;
+        font-family: tahoma, geneva, sans-serif;
+    }}
+    """.format(bg=initial)
+    )
+    bg_edit_label.selected_rgba = lambda lab=bg_edit_label: re.search(r"background-color:\s*([^;]+)", bg_edit_label.styleSheet()).groups()[0]
+    bg_edit_label.set_rgba = lambda new_rgba=None, initial=False, bg_lab=bg_edit_label: set_rgba(bg_lab, new_rgba, initial)
+    bg_edit_label.update()
+    return bg_edit_label
+
+
+def update_label_color(evt, bg_label):
+    prev_rgba_col = tuple(
+        map(int, re.findall(r'[0-9]+', bg_label.selected_rgba()))
+    )
+    prev_rgb = prev_rgba_col[:3]
+    color_picker = QColorDialog(QColor(*prev_rgb), mw)
+    if color_picker.exec_():
+        bg_label.set_rgba(color_picker.selectedColor().getRgb()[:3])
+        QApplication.sendEvent(bg_label, QEvent(QEvent.Leave))
+
+
+def update_label_opacity(evt, bg_label):
+    prev_rgba_col = tuple(
+        map(int, re.findall(r'[0-9]+', bg_label.selected_rgba()))
+    )
+    prev_opacity = prev_rgba_col[3]
+    new_opacity = min(prev_opacity + 1, 100) if evt.delta(
+    ) > 30 else max(prev_opacity - 1, 30) if evt.delta() < -30 else prev_opacity
+    if prev_opacity != new_opacity:
+        bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
 
 
 def irx_file_path(filename):
@@ -25,11 +102,16 @@ def irx_file_path(filename):
         os.path.dirname(os.path.abspath(__file__)), "data", filename
     )
 
+
 def capitalize_phrase(phrase):
     return " ".join([w.capitalize() for w in phrase.split(" ")])
 
+
 def pretty_byte_value(byte_val):
-    return "{0}K".format(int(byte_val / 1024)) if byte_val < 972800 else "{0:.1f}M".format(byte_val / 1024 / 1024)
+    return "{0}K".format(
+        int(byte_val / 1024)
+    ) if byte_val < 972800 else "{0:.1f}M".format(byte_val / 1024 / 1024)
+
 
 def compress_image(img_data, extension, max_size=None):
     max_size = max_size or mw.readingManager.settings.get(
@@ -56,7 +138,7 @@ def compress_image(img_data, extension, max_size=None):
         if int(compression_ratio) == 1:
             buf = QBuffer()
             buf.open(QBuffer.ReadWrite)
-            tmp = tmp.scaled(tmp.width()/2, tmp.height()/2)
+            tmp = tmp.scaled(tmp.width() / 2, tmp.height() / 2)
             tmp.save(buf, extension)
             img_data = buf.data()
             buf.close()
@@ -311,6 +393,14 @@ def setComboBoxItem(comboBox, text):
 def removeComboBoxItem(comboBox, text):
     index = comboBox.findText(text, Qt.MatchFixedString)
     comboBox.removeItem(index)
+
+
+def addComboBoxItem(comboBox, text, allow_duplicates=False):
+    if not allow_duplicates and comboBox.findText(text, Qt.MatchFixedString) != -1:
+        return
+    curr_count = comboBox.count()
+    comboBox.addItem(text)
+    comboBox.setCurrentIndex(curr_count)
 
 
 def disableOutdated():
