@@ -313,7 +313,7 @@ class ReadingManager:
                     help="AddItems",
                 )
                 return
-            self.textManager.link_note(new_note, "card")
+            self.textManager.link_note(new_note, bg_col=quick_key['bg'])
 
         if quick_key["editSource"]:
             EditCurrent(mw)
