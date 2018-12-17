@@ -29,7 +29,7 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image
+from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image, irx_info_box
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 
 
@@ -411,6 +411,17 @@ class TextManager:
             self.link_note(new_note, schedule_name=schedule_name)
 
     def extract_image(self, remove_src=False, skip_captions=False):
+        irx_info_box(
+            flag_key='importingImages',
+            text="Important points about importing images.",
+            info_texts=[
+                "This process can take a while, based on the number of images you are about to import, the size of those images and the compression required.",
+                "Anki may appear unresponsive during this time, this normally temporary.",
+                "It is <b>highly</b> recommended to let the image importing process do it's thing before you proceed.",
+                "Also, while it is possible to import multiple images at one go, importing images one at a time is usually more stable and allows IR3X to extract automatic captions more effectively."
+            ],
+            parent=mw
+        )
         if mw.web.selectedText():
             mw.web.triggerPageAction(QWebPage.Copy)
         else:

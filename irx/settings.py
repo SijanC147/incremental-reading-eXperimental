@@ -26,7 +26,8 @@ from aqt.utils import showInfo, tooltip
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
     mac_fix, db_log, pretty_date, destroy_layout, timestamp_id, is_valid_number,
-    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase, pretty_byte_value, color_picker_label
+    validation_style, hex_to_rgb, irx_file_path, keypress_capture_field, capitalize_phrase, 
+    pretty_byte_value, color_picker_label, irx_info_box
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
@@ -135,6 +136,12 @@ class SettingsManager():
             self.show_help()
         addHook('unloadProfile', self.save_settings)
 
+    def reset_info_flags(self):
+        for flag in self.settings['infoMsgFlags']:
+            self.settings['infoMsgFlags'][flag] = True
+        self.save_settings()
+        tooltip("<b>IR3X</b>: Info message flags reset.")
+
     def refresh_schedule_menu_items(self):
         for action in mw.readingManager.schedule_key_actions:
             mw.customMenus['IR3X::Schedules'].removeAction(action)
@@ -175,11 +182,9 @@ class SettingsManager():
         )
         if duplicate_controls:
             showInfo(
-                """
-IR3X made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
-I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
-Review your <code>editable_controls.py</code> file, quick keys settings and/or schedule answer keys. <br/><br/>\
-""",
+                """IR3X made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
+                I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
+                Review your <code>editable_controls.py</code> file, quick keys settings and schedule answer keys. <br/><br/>""",
                 type="warning",
                 title="IR3X Controls"
             )
@@ -527,6 +532,7 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
                 },
             'scroll': {},
             'zoom': {},
+            'infoMsgFlags': {}
         }
 
         self.media_dir = os.path.join(mw.pm.profileFolder(), 'collection.media')
@@ -592,6 +598,16 @@ Review your <code>editable_controls.py</code> file, quick keys settings and/or s
         self.schedules_dialog = QDialog(mw)
         self.schedules_dialog.setLayout(main_layout)
         self.schedules_dialog.setWindowTitle('IR3X Scheduling')
+        irx_info_box(
+            flag_key='editingSchedules',
+            text="Editing Schedules",
+            info_texts=[
+                "Any highlight changes will only apply from this point forward.",
+                "Existing highlights will <b>not</b> be updated."
+            ],
+            modality=Qt.WindowModal,
+            parent=self.schedules_dialog
+        )
         self.schedules_dialog.exec_()
 
     def validate_and_save_schedules(self):
