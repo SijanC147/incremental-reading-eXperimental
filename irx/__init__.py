@@ -6,4 +6,4 @@ from aqt import mw
 
 import irx.main
 
-mw.readingManager = irx.main.ReadingManager()
+mw.readingManagerX = irx.main.ReadingManager()

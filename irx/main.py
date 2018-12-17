@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import re
 import operator
+from os import listdir
 from os.path import join, exists
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
@@ -49,12 +50,31 @@ class ReadingManager:
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager()
         self.settings = self.settingsManager.settings
+        irx_info_box(
+            flag_key='firstTimeOpening',
+            text="Thank you for trying out IR3X!",
+            info_texts=[
+                "Seriously, I really appreciate it, you're awesome.",
+                "First off, you should find a new deck created (<code><b>{}</b></code>) this should be used to store all your IR3X notes.".format(self.settings['containerDeck']),
+                "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
+                "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
+                "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
+                "Check the Help menu for a list of your current control setup (editable through the <code><b>editable_controls.py</b></code> file in the addon folder)",
+                "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
+                "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
+                "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
+                "<b>Also take some time to have a look at the About menu, where I mention the original creators of the IR add-on whose work was the foundation for this add-on.</b>",
+                "Thanks again for giving this add-on a shot."
+            ],
+            parent=mw
+        )
         self.scheduler = Scheduler(self.settings)
         self.textManager = TextManager(self.settings)
         self.quickKeys = QuickKeys(self.settings)
         mw.viewManager = ViewManager(self.settings)
 
         self.copy_missing_files()
+        self.load_irx_container_deck()
 
         if not mw.col.models.byName(self.settings["modelName"]):
             self.setup_irx_model()
@@ -99,15 +119,41 @@ class ReadingManager:
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
 
+    def load_irx_container_deck(self):
+        prev_container_deck = mw.col.decks.byName(self.settings['prevContainerDeck'])
+        container_deck = mw.col.decks.byName(self.settings['containerDeck'])
+        problem = False
+        if not container_deck and not prev_container_deck:
+            try:
+                mw.col.decks.id(self.settings['containerDeck'])
+                mw.requireReset()
+            finally:
+                if mw.col:
+                    mw.maybeReset()
+            container_deck = mw.col.decks.byName(self.settings['containerDeck'])
+            if container_deck:
+                tooltip("<b>IR3X</b>: Created container deck, {}".format(self.settings['containerDeck']))
+            else:
+                problem = True
+        elif not container_deck and prev_container_deck:
+            try:
+                mw.col.decks.rename(prev_container_deck, self.settings['containerDeck'])
+                mw.requireReset()
+            finally:
+                if mw.col:
+                    mw.maybeReset()
+            container_deck = mw.col.decks.byName(self.settings['containerDeck'])
+            if container_deck:
+                tooltip("<b>IR3X</b>: Renamed container deck, {} -> {}".format(self.settings['prevContainerDeck'], self.settings['containerDeck']))
+            else:
+                problem = True
+        if problem:
+            showWarning("There was a problem setting up the IR3X container Deck, you could create the deck yourself, using the name {}".format(self.settings['containerDeck']))
+        else:
+            self.settings['prevContainerDeck'] = self.settings['containerDeck']
+
     def copy_missing_files(self):
-        req_files = [
-            "_irx_img_fallback.png",
-            "_irx_images.svg",
-            "_irx_formatting.svg",
-            "_irx_removed.svg",
-            "_irx_extracts.svg",
-        ]
-        for req_file in req_files:
+        for req_file in [f for f in listdir(irx_file_path()) if f[0] == "_"]:
             if not exists(join(mw.col.media.dir(), req_file)):
                 mw.col.media.writeData(
                     req_file,
@@ -162,7 +208,7 @@ class ReadingManager:
         except ImportError:
             _pb = None
 
-        original_undo = mw.readingManager.textManager.undo
+        original_undo = mw.readingManagerX.textManager.undo
 
         def patched_undo(show_tooltip):
             if _pb:
@@ -173,7 +219,7 @@ class ReadingManager:
             if _pb:
                 addHook("showQuestion", _pb)
 
-        mw.readingManager.textManager.undo = lambda show_tooltip=True: patched_undo(show_tooltip)
+        mw.readingManagerX.textManager.undo = lambda show_tooltip=True: patched_undo(show_tooltip)
 
     def setup_irx_model(self):
         model = mw.col.models.new(self.settings["modelName"])
@@ -241,7 +287,7 @@ class ReadingManager:
                 self.toggle_space_scroll(False)
             irx_info_box(
                 flag_key='firstTimeViewing',
-                text="Before we get started.",
+                text="Important points to keep in mind.",
                 info_texts=[
                     "First off, thank you for trying out this add-on, you're awesome.",
                     "Most text interaction functionality has been relatively stable as long as I stick these pointers:"+
@@ -251,10 +297,6 @@ class ReadingManager:
                         "If you want to apply styles to highlighted chunks, it's usually better to style the text first, then highlight it.",
                         "I highly recommend you highlight a chunk of text first then click on the link that is generated to edit that extract, instead of using the 'Edit Extract' functionality to skip a click.",
                     ])),
-                    "If you're going for a stable experience, ideally avoid being over-adventurous.",
-                    "That being said, bug reports help me make this add-on better, so please report any and all of those at the github repo (linked through the About menu). I appreciate it!",
-                    "<u>Also take some time to have a look at the About menu, where I mention the original creators of the IR add-on whose work was the foundation for this add-on.</u>",
-                    "Check the Help menu for a list of your current control setup (editable through <code>editable_controls.py</code>), most of these controls should deactivate when you are not viewing IR3X notes.",
                 ],
                 parent=mw
             )
@@ -305,8 +347,7 @@ class ReadingManager:
         new_note.setTagsFromStr(current_note.stringTags())
 
         deck_name = (
-            mw.col.decks.get(current_card.did
-                            )["name"].replace("Incremental Reading::", "")
+            mw.col.decks.get(current_card.did)["name"].replace("{}::".format(self.settings['containerDeck']), "")
             if quick_key["deckName"] == "[Mirror]" else quick_key["deckName"]
         )
         target_deck = mw.col.decks.byName(deck_name)
@@ -348,14 +389,14 @@ class ReadingManager:
 class IREJavaScriptCallback(QObject):
     @pyqtSlot(str)
     def htmlUpdated(self, context):
-        mw.readingManager.htmlUpdated()
+        mw.readingManagerX.htmlUpdated()
 
 
 def answerButtonList(self, _old):
     current_card = self.card
     if isIrxCard(current_card):
         page_bottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
-        card_pos = mw.readingManager.settings['scroll'][str(current_card.id)]
+        card_pos = mw.readingManagerX.settings['scroll'][str(current_card.id)]
         answers_button_list = sorted(
             (
                 (
@@ -366,7 +407,7 @@ def answerButtonList(self, _old):
                         name=_(schedule["name"])
                     )
                 )
-                for schedule in mw.readingManager.settings['schedules'].values()
+                for schedule in mw.readingManagerX.settings['schedules'].values()
                 if schedule["anskey"]
             ),
             key=operator.itemgetter(0)
@@ -392,7 +433,7 @@ def answerCard(self, ease, _old):
         active_schedules = list(
             map(
                 int,
-                mw.readingManager.settingsManager.schedule_keys_action_format(
+                mw.readingManagerX.settingsManager.schedule_keys_action_format(
                     action_major=False
                 ).keys()
             )
@@ -410,10 +451,10 @@ def answerCard(self, ease, _old):
             _old(self, irx_norm_ease[active_schedules.index(ease)])
         else:  # 10 will pass Anki's assertion, and is not in IRX answer keys limits (1-9)
             _old(self, 10)
-        irx_schedule = mw.readingManager.settingsManager.schedule_keys_action_format(
+        irx_schedule = mw.readingManagerX.settingsManager.schedule_keys_action_format(
             action_major=False
         ).get(str(ease)) if ease != 0 else "done"
-        mw.readingManager.scheduler.answer(card, irx_schedule)
+        mw.readingManagerX.scheduler.answer(card, irx_schedule)
     else:
         _old(self, ease)
 
@@ -443,7 +484,7 @@ def LinkHandler(self, evt, _old):
 def keyHandler(self, evt, _old):
     irx_action = {
         k.lower(): v
-        for k, v in mw.readingManager.settings["irx_controls"].items()
+        for k, v in mw.readingManagerX.settings["irx_controls"].items()
         if len(k) == 1
     }.get(unicode(evt.text()).lower()) if viewingIrxText() else False
     if irx_action:
@@ -455,7 +496,7 @@ def defaultEase(self, _old):
     current_card = self.card
     if isIrxCard(current_card):
         page_bottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
-        card_pos = mw.readingManager.settings['scroll'][str(current_card.id)]
+        card_pos = mw.readingManagerX.settings['scroll'][str(current_card.id)]
         return 0 if page_bottom == card_pos or page_bottom == 0 else 2
     return _old(self)
 

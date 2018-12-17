@@ -24,18 +24,18 @@ class QuickKeys:
         self.settings = settings
 
     def refresh_menu_items(self):
-        for action in mw.readingManager.quickKeyActions:
+        for action in mw.readingManagerX.quickKeyActions:
             mw.customMenus['IR3X::Quick Keys'].removeAction(action)
-        mw.readingManager.quickKeyActions = []
+        mw.readingManagerX.quickKeyActions = []
 
         for keys, params in self.settings['quickKeys'].items():
-            mw.readingManager.quickKeyActions.append(
+            mw.readingManagerX.quickKeyActions.append(
                 addMenuItem(
                     menuName='IR3X::Quick Keys',
                     text="{0} -> {1}".format(
                         params['modelName'], params['deckName']
                     ),
-                    function=partial(mw.readingManager.quick_add, params),
+                    function=partial(mw.readingManagerX.quick_add, params),
                     keys=keys
                 )
             )
@@ -97,8 +97,12 @@ class QuickKeys:
         last_row_layout = QHBoxLayout()
         checkbox_layout = QVBoxLayout()
         col_label_layout = QVBoxLayout()
-        self.quickKeyEditExtractCheckBox = QCheckBox('Edit Extracted Note')
-        self.quickKeyEditSourceCheckBox = QCheckBox('Edit Source Note')
+        self.quickKeyEditExtractCheckBox = QCheckBox(
+            'Edit Extracted Note (not recommended)'
+        )
+        self.quickKeyEditSourceCheckBox = QCheckBox(
+            'Edit Source Note (not recommended)'
+        )
         self.quickKeyPlainTextCheckBox = QCheckBox('Extract as Plain Text')
         checkbox_layout.addSpacing(15)
         checkbox_layout.addWidget(self.quickKeyEditExtractCheckBox)
@@ -106,6 +110,22 @@ class QuickKeys:
         checkbox_layout.addWidget(self.quickKeyPlainTextCheckBox)
 
         self.bg_edit_label = color_picker_label()
+        _orig = self.bg_edit_label.mousePressEvent
+
+        def _mod_press(*args, **kwargs):
+            irx_info_box(
+                flag_key='editingQuickKeys',
+                text="Changing Quick Keys' Colors",
+                info_texts=[
+                    "Any highlight changes will only apply from this point forward.",
+                    "Existing highlights will <b>not</b> be updated."
+                ],
+                parent=self.dialog
+            )
+            _orig(*args, **kwargs)
+
+        self.bg_edit_label.mousePressEvent = _mod_press
+
         last_row_layout.addLayout(checkbox_layout)
         last_row_layout.addStretch()
         col_label_layout.addWidget(self.bg_edit_label)
@@ -137,12 +157,20 @@ class QuickKeys:
         self.dialog.setLayout(layout)
         self.dialog.setWindowTitle('IR3X Quick Keys')
         irx_info_box(
-            flag_key='editingQuickKeys',
-            text="Editing Quick Keys",
+            flag_key='firstTimeViewingQuickKeys',
+            text="How IR3X Schedules Work",
             info_texts=[
-                "Any highlight changes will only apply from this point forward.",
-                "Existing highlights will <b>not</b> be updated."
+                "IR3X does away with the original highlight option in favor of extracts. In IR3X terms, <b>extracts = highlights = extracts</b>",
+                "This means that anything that is highlighted in an IR3X represents another note, which can be either another IR3X note or another type of Anki note",
+                "Quick Keys deal with the latter, while the former are configurable through Schedules.",
+                "When viewing IR3X text, you can use a configured quick key combination to highlight the selected content as well as create a new note based on the settings below."
+                "Most of these settings are straight forward and function exactly the same way as in original IR addon, with a couple of exceptions."
+                "When setting the destination deck to <b>[Mirror], IR3X will try to find a mirror of the current deck with respect to the IR3X container (root) deck, or create it if it doesn't exist.</b>",
+                "The target field has been replaced with a <b>very rudimentary and experimental templating engine</b>, this allows you to select specifically what IR3X will insert in which field on the new note.",
+                "The option to edit the extract note is there but very much <b> not recommended </b> as it can lead to some problems (these stem directly from my lack of experience with Qt, sorry about that).",
+                "A much better and more stable option is to only create the extract with a quick key, then just click on the link that is generated, which automatically opens the note in the editor."
             ],
+            modality=Qt.WindowModal,
             parent=self.dialog
         )
         self.dialog.exec_()

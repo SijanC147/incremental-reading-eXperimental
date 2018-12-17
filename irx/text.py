@@ -162,7 +162,7 @@ class TextManager:
         image_label = QLabel()
         image_label.setFixedSize(300, 250)
         image_label.setAlignment(Qt.AlignCenter)
-        image_manager_help_box = mw.readingManager.settingsManager.make_help_group('Image Manager')
+        image_manager_help_box = mw.readingManagerX.settingsManager.make_help_group('Image Manager')
         image_manager_help_box.setFixedSize(300, 250)
         image_manager_help_box.hide()
 
@@ -405,7 +405,7 @@ class TextManager:
             if schedule_name:
                 cards = new_note.cards()
                 if cards:
-                    mw.readingManager.scheduler.answer(
+                    mw.readingManagerX.scheduler.answer(
                         cards[0], schedule_name, from_extract=True
                     )
             self.link_note(new_note, schedule_name=schedule_name)
@@ -547,7 +547,7 @@ class TextManager:
                 except KeyError:
                     extract_title = extract_nid
                 mw.col.remNotes([extract_nid])
-                mw.readingManager.scheduler.update_organizer()
+                mw.readingManagerX.scheduler.update_organizer()
                 msg += "<br/> Deleted note: {}".format(extract_title)
             except TypeError:
                 mw.col.db.execute("delete from cards where nid=?", extract_nid)

@@ -96,21 +96,22 @@ def update_label_opacity(evt, bg_label):
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
 
 def irx_info_box(flag_key, title=None, text=None, info_texts=None, modality=None, parent=None):
-    flag = mw.readingManager.settings['infoMsgFlags'].get(flag_key, True)
+    flag = mw.readingManagerX.settings['infoMsgFlags'].get(flag_key, True)
     if not flag:
         return
     modality = modality or (Qt.NonModal if not parent else Qt.WindowModal)
     msg_box = QMessageBox(parent or None)
     msg_box.setWindowTitle(title or "IR3X")
     msg_box.setIcon(QMessageBox.Information)
-    msg_box.setText("<b><i>Please Read</i></b><br/>" + ("<b>{}</b>".format(text) or ""))
+    msg_box.setText("<b><i><u>Please Read</u></i></b><br/><br/>" + ("<b>{}</b>".format(text) or ""))
     msg_box.setInformativeText("<br/><br/>".join(info_texts) if info_texts else "")
     ok_button = msg_box.addButton(QMessageBox.Ok)
     dont_show_again_button = msg_box.addButton("Don't show again", QMessageBox.AcceptRole) 
     msg_box.setDefaultButton(ok_button)
     msg_box.setWindowModality(modality or Qt.NonModal)
+    msg_box.setWindowOpacity(1)
     def update_flag(flag_key, msg_box):
-        mw.readingManager.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
+        mw.readingManagerX.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
     msg_box.hideEvent = lambda evt, f=flag_key, m=msg_box: update_flag(f, m)
     if parent:
         if not parent.isVisible():
@@ -126,9 +127,9 @@ def irx_info_box(flag_key, title=None, text=None, info_texts=None, modality=None
             msg_box.exec_()
 
 
-def irx_file_path(filename):
+def irx_file_path(filename=None):
     return os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "data", filename
+        os.path.dirname(os.path.abspath(__file__)), "data", filename or ""
     )
 
 
@@ -143,7 +144,7 @@ def pretty_byte_value(byte_val):
 
 
 def compress_image(img_data, extension, max_size=None):
-    max_size = max_size or mw.readingManager.settings.get(
+    max_size = max_size or mw.readingManagerX.settings.get(
         'maxImageBytes', 1048576
     )
     compressed_data = img_data
@@ -258,7 +259,7 @@ def destroy_layout(layout):
 def isIrxCard(card):
     if (
         card and
-        (card.model().get("name") == mw.readingManager.settings['modelName'])
+        (card.model().get("name") == mw.readingManagerX.settings['modelName'])
     ):
         return True
     else:
@@ -289,11 +290,11 @@ def mac_fix(keys, reverse=False):
 
 def irx_siblings(parent_note):
     parent_field = "irxnid:{}".format(parent_note.id)
-    irx_model = mw.col.models.byName(mw.readingManager.settings["modelName"])
+    irx_model = mw.col.models.byName(mw.readingManagerX.settings["modelName"])
     irx_notes = [mw.col.getNote(nid) for nid in mw.col.models.nids(irx_model)]
     sibling_notes = [
         note for note in irx_notes if
-        getField(note, mw.readingManager.settings["pidField"]) == parent_field
+        getField(note, mw.readingManagerX.settings["pidField"]) == parent_field
     ]
     return sibling_notes
 
@@ -304,7 +305,7 @@ def timestamp_id():
 
 def pretty_date(templ_format=None, invalid=None):
     default = "%A, %d %B %Y %H:%M"
-    set_format = mw.readingManager.settings.get('captionFormat', default)
+    set_format = mw.readingManagerX.settings.get('captionFormat', default)
     templ_format = templ_format or set_format
     try:
         return datetime.now().strftime(templ_format)
