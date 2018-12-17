@@ -89,7 +89,7 @@ class ViewManager():
         pageBottom = mw.web.page().mainFrame().scrollBarMaximum(Qt.Vertical)
         newPos = min(pageBottom, (currentPos + movementSize))
         reached_end = newPos == pageBottom or pageBottom == 0
-        mw.readingManager.space_scroll.setEnabled(not reached_end)
+        mw.readingManagerX.space_scroll.setEnabled(not reached_end)
         self.setScroll(newPos)
 
     def lineUp(self):

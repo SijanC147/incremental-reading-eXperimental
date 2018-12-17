@@ -34,35 +34,35 @@ from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 
 
 REVIEWER_FUNCTIONS = {
-    "show help": lambda: mw.readingManager.settingsManager.show_help(),
-    "toggle images": lambda: mw.readingManager.textManager.toggle_images_sidebar(),
-    "toggle formatting": lambda: mw.readingManager.textManager.toggle_show_formatting(),
-    "toggle removed text": lambda: mw.readingManager.textManager.toggle_show_removed(),
-    "toggle extracts": lambda: mw.readingManager.textManager.toggle_show_extracts(),
-    "done (suspend)": lambda: mw.readingManager.scheduler.done_with_note(),
-    "undo": lambda: mw.readingManager.textManager.undo(),
-    "add image": lambda: mw.readingManager.textManager.extract_image(),
-    "add image (skip caption)": lambda: mw.readingManager.textManager.extract_image(skip_captions=True),
-    "extract image": lambda: mw.readingManager.textManager.extract_image(remove_src=True),
-    "extract image (skip caption)": lambda: mw.readingManager.textManager.extract_image(remove_src=True, skip_captions=True),
-    "extract important": lambda: mw.readingManager.textManager.extract(schedule_name="soon"),
-    "extract complimentary": lambda: mw.readingManager.textManager.extract(schedule_name="later"),
-    "extract important (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_name="soon"),
-    "extract complimentary (and edit)": lambda: mw.readingManager.textManager.extract(also_edit=True, schedule_name="later"),
-    "bold": lambda: mw.readingManager.textManager.style("bold"),
-    "underline": lambda: mw.readingManager.textManager.style("underline"),
-    "italic": lambda: mw.readingManager.textManager.style("italic"),
-    "strikethrough": lambda: mw.readingManager.textManager.style("strikeThrough"),
-    "remove": lambda: mw.readingManager.textManager.remove(),
-    "show reading list": lambda: mw.readingManager.scheduler.show_organizer(),
-    "show image manager": lambda: mw.readingManager.textManager.manage_images(),
+    "show help": lambda: mw.readingManagerX.settingsManager.show_help(),
+    "toggle images": lambda: mw.readingManagerX.textManager.toggle_images_sidebar(),
+    "toggle formatting": lambda: mw.readingManagerX.textManager.toggle_show_formatting(),
+    "toggle removed text": lambda: mw.readingManagerX.textManager.toggle_show_removed(),
+    "toggle extracts": lambda: mw.readingManagerX.textManager.toggle_show_extracts(),
+    "done (suspend)": lambda: mw.readingManagerX.scheduler.done_with_note(),
+    "undo": lambda: mw.readingManagerX.textManager.undo(),
+    "add image": lambda: mw.readingManagerX.textManager.extract_image(),
+    "add image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(skip_captions=True),
+    "extract image": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True),
+    "extract image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True, skip_captions=True),
+    "extract important": lambda: mw.readingManagerX.textManager.extract(schedule_name="soon"),
+    "extract complimentary": lambda: mw.readingManagerX.textManager.extract(schedule_name="later"),
+    "extract important (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="soon"),
+    "extract complimentary (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="later"),
+    "bold": lambda: mw.readingManagerX.textManager.style("bold"),
+    "underline": lambda: mw.readingManagerX.textManager.style("underline"),
+    "italic": lambda: mw.readingManagerX.textManager.style("italic"),
+    "strikethrough": lambda: mw.readingManagerX.textManager.style("strikeThrough"),
+    "remove": lambda: mw.readingManagerX.textManager.remove(),
+    "show reading list": lambda: mw.readingManagerX.scheduler.show_organizer(),
+    "show image manager": lambda: mw.readingManagerX.textManager.manage_images(),
     "zoom in": lambda: mw.viewManager.zoomIn(),
     "zoom out": lambda: mw.viewManager.zoomOut(),
     "line up": lambda: mw.viewManager.lineUp(),
     "line down": lambda: mw.viewManager.lineDown(),
     "page up": lambda: mw.viewManager.pageUp(),
     "page down": lambda: mw.viewManager.pageDown(),
-    "next card": lambda: mw.readingManager.next_irx_card(),
+    "next card": lambda: mw.readingManagerX.next_irx_card(),
 }
 
 
@@ -143,19 +143,19 @@ class SettingsManager():
         tooltip("<b>IR3X</b>: Info message flags reset.")
 
     def refresh_schedule_menu_items(self):
-        for action in mw.readingManager.schedule_key_actions:
+        for action in mw.readingManagerX.schedule_key_actions:
             mw.customMenus['IR3X::Schedules'].removeAction(action)
-        mw.readingManager.schedule_key_actions = []
+        mw.readingManagerX.schedule_key_actions = []
 
         schedules = ((int(schedule["anskey"] or 10), schedule["name"]) for schedule in self.settings['schedules'].values())
         schedules_sorted = sorted(schedules, key=operator.itemgetter(0))
         for anskey, name in schedules_sorted:
-            mw.readingManager.schedule_key_actions.append(
+            mw.readingManagerX.schedule_key_actions.append(
                 addMenuItem(
                     menuName='IR3X::Schedules',
                     text=name,
                     function=partial(
-                        mw.readingManager.textManager.extract,
+                        mw.readingManagerX.textManager.extract,
                         schedule_name=name
                     ),
                     keys=str(anskey if anskey!= 10 else "") or None
@@ -184,7 +184,7 @@ class SettingsManager():
             showInfo(
                 """IR3X made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
                 I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
-                Review your <code>editable_controls.py</code> file, quick keys settings and schedule answer keys. <br/><br/>""",
+                Review your <code>editable_controls.py</code> file, quick keys settings or schedule answer keys. <br/><br/>""",
                 type="warning",
                 title="IR3X Controls"
             )
@@ -495,6 +495,8 @@ class SettingsManager():
             "editExtract": False,
             "editSource": False,
             "extractDeck": None,
+            'prevContainerDeck': 'Incremental Reading',
+            'containerDeck': 'IR3X',
             'modelName': 'IR3X',
             'captionFormat': "%A, %d %B %Y %H:%M",
             'maxImageBytes': 1048576,
@@ -599,11 +601,20 @@ class SettingsManager():
         self.schedules_dialog.setLayout(main_layout)
         self.schedules_dialog.setWindowTitle('IR3X Scheduling')
         irx_info_box(
-            flag_key='editingSchedules',
-            text="Editing Schedules",
+            flag_key='firstTimeViewingSchedules',
+            text="How IR3X Schedules Work",
             info_texts=[
-                "Any highlight changes will only apply from this point forward.",
-                "Existing highlights will <b>not</b> be updated."
+                "IR3X does away with the original highlight option in favor of extracts. In IR3X terms, <b>extracts = highlights = extracts</b>",
+                "This means that anything that is highlighted in an IR3X represents another note, which can be either another IR3X note or another type of Anki note",
+                "Schedules deal with the former, while the latter are configurable through Quick Keys.",
+                "When viewing IR3X text, extracts can be created by highlighting text and using the assigned <b>Answer Key</b>",
+                "Answer keys can be any value between 1 and 9. A schedule can also have no answer key assigned to it, in that case the schedule is considered <b>inactive</b>",
+                "You can still use an inactive schedule but only through the Schedules Menu, not through a keyboard shortcut.",
+                "Moreover, the primary difference is that <b>active schedules will also appear as answer buttons on the answer card</b>.",
+                "You can re-schedule an IR3X note before moving on to the next from the answer screen using the schedule answer key.",
+                "This means at any time you can have <b>up to 9 active schedules</b> as a way of assigning priorities to IR3X notes.",
+                "Finally, IR3X also tried to intelligently assign a title to an extract based on the title of its parent for efficiency.",
+                "Should you want to change this, all extracts also serve as hyperlinks to the created notes, clicking on them will open the editor to make any changes."
             ],
             modality=Qt.WindowModal,
             parent=self.schedules_dialog
@@ -791,6 +802,21 @@ class SettingsManager():
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
         bg_edit_label = color_picker_label(schedule.get("bg"))
+        _orig = bg_edit_label.mousePressEvent 
+        def _mod_press(*args, **kwargs):
+            irx_info_box(
+                flag_key='editingScheduleHighlights',
+                text="Changing Schedules' Colors",
+                info_texts=[
+                    "Any highlight changes will only apply from this point forward.",
+                    "Existing highlights will <b>not</b> be updated."
+                ],
+                modality=Qt.WindowModal,
+                parent=self.schedules_dialog
+            )
+            _orig(*args, **kwargs)
+        bg_edit_label.mousePressEvent = _mod_press
+
         answer_key_label = QLabel("Key [1-9]")
         answer_key_input = keypress_capture_field('123456789')
         answer_key_input.textChanged.connect(lambda evt, val_fn=self.validate_sched_anskey, pos=5: validate_all(evt, val_fn, pos))
