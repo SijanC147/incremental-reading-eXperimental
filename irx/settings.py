@@ -307,7 +307,18 @@ class SettingsManager():
 
         dialog.setLayout(main_layout)
         dialog.setWindowTitle('IR3X Settings')
-        
+        irx_info_box(
+            flag_key='firstTimeViewingSettings',
+            text="IR3X Settings",
+            info_texts=[
+                "These should be quite self-explenatory, Zoom and Scroll settings work exactly the same as in the original add-on",
+                "The new settings allow you to define the maximum size for imported images which IR3X when compressing images.",
+                "The Auto-caption setting is used to define the atuomatic caption that is assigned to an image when IR3X cannot extract one from the clipboard.",
+                "This setting supports <code>strftime</code> formatting (click on the button next to the input for more info), a live preview is displayed below the input.",
+                "If the inputted template is invalid (error message displayed), any changes will be discarded."
+            ],
+            parent=dialog
+        )
         if not dialog.exec_():
             return
         
@@ -495,8 +506,8 @@ class SettingsManager():
             "editExtract": False,
             "editSource": False,
             "extractDeck": None,
-            'prevContainerDeck': 'Incremental Reading',
-            'containerDeck': 'IR3X',
+            'prevContainerDeck': '~IR3X',
+            'containerDeck': '~IR3X',
             'modelName': 'IR3X',
             'captionFormat': "%A, %d %B %Y %H:%M",
             'maxImageBytes': 1048576,
@@ -802,7 +813,7 @@ class SettingsManager():
         random_check_box = QCheckBox('Randomize')
         sched_id = str(schedule.get("id", timestamp_id()))
         bg_edit_label = color_picker_label(schedule.get("bg"))
-        _orig = bg_edit_label.mousePressEvent 
+        _orig_press = bg_edit_label.mousePressEvent 
         def _mod_press(*args, **kwargs):
             irx_info_box(
                 flag_key='editingScheduleHighlights',
@@ -814,8 +825,22 @@ class SettingsManager():
                 modality=Qt.WindowModal,
                 parent=self.schedules_dialog
             )
-            _orig(*args, **kwargs)
+            _orig_press(*args, **kwargs)
         bg_edit_label.mousePressEvent = _mod_press
+        _orig_wheel = bg_edit_label.wheelEvent 
+        def _mod_wheel(*args, **kwargs):
+            irx_info_box(
+                flag_key='editingScheduleHighlights',
+                text="Changing Schedules' Colors",
+                info_texts=[
+                    "Any highlight changes will only apply from this point forward.",
+                    "Existing highlights will <b>not</b> be updated."
+                ],
+                modality=Qt.WindowModal,
+                parent=self.schedules_dialog
+            )
+            _orig_wheel(*args, **kwargs)
+        bg_edit_label.wheelEvent = _mod_wheel
 
         answer_key_label = QLabel("Key [1-9]")
         answer_key_input = keypress_capture_field('123456789')

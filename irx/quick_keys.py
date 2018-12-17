@@ -110,11 +110,11 @@ class QuickKeys:
         checkbox_layout.addWidget(self.quickKeyPlainTextCheckBox)
 
         self.bg_edit_label = color_picker_label()
-        _orig = self.bg_edit_label.mousePressEvent
+        _orig_press = self.bg_edit_label.mousePressEvent
 
         def _mod_press(*args, **kwargs):
             irx_info_box(
-                flag_key='editingQuickKeys',
+                flag_key='editingQuickKeysHighlights',
                 text="Changing Quick Keys' Colors",
                 info_texts=[
                     "Any highlight changes will only apply from this point forward.",
@@ -122,9 +122,24 @@ class QuickKeys:
                 ],
                 parent=self.dialog
             )
-            _orig(*args, **kwargs)
+            _orig_press(*args, **kwargs)
 
         self.bg_edit_label.mousePressEvent = _mod_press
+        _orig_wheel = self.bg_edit_label.wheelEvent
+
+        def _mod_wheel(*args, **kwargs):
+            irx_info_box(
+                flag_key='editingQuickKeysHighlights',
+                text="Changing Quick Keys' Colors",
+                info_texts=[
+                    "Any highlight changes will only apply from this point forward.",
+                    "Existing highlights will <b>not</b> be updated."
+                ],
+                parent=self.dialog
+            )
+            _orig_wheel(*args, **kwargs)
+
+        self.bg_edit_label.wheelEvent = _mod_wheel
 
         last_row_layout.addLayout(checkbox_layout)
         last_row_layout.addStretch()
