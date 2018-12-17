@@ -7,8 +7,6 @@ from PyQt4.QtCore import Qt
 
 from aqt import mw
 
-from irx._version import __version__
-
 IR_ORIGINAL_GITHUB_URL = 'https://github.com/luoliyan/incremental-reading'
 IRX_GITHUB_URL = "https://github.com/SijanC147/incremental-reading-eXperimental"
 
@@ -32,12 +30,14 @@ def showAbout():
 <p><u>Everything</u> implemented in this add-on was only made possible through reverse-engineering the original to learn Qt.</p>
 <hr/>
 <p>The motivation behind this add-on was initially trying to port some of the v4 features to the</p>
-<p>Anki 2.0 compatible v3 version, for those who, like myself, aren't ready to make the move to Anki 2.1.</p>
+<p>Anki 2.0-compatible v3 version, for those who, like myself, aren't ready to make the Anki 2.1 leap just yet.</p>
 <p>Consider everything in this add-on <i>experimental and barely functional</i>, this was a learning experience</p> 
 <p>more than anything, however I will try my best to maintain and build on it moving forward.</p>
 <p>I will be taking a break from it for some time following this release (mid-December 2018) due to my academic obligations.</p>
 <p>However, I figured maybe if some people try it out I could get some feedback and have issues ready to fix when I pick it up again.</p>
 <p>Any and all input is greatly appreciated. Thank you for trying this add-on.</p>
+<hr/>
+<p>All icons used in this add-on where made by <a title="Freepik" href="http://www.freepik.com">Freepik</a> and obtained from <a title="Flaticon" href="http://www.flaticon.com">flaticon</a>.</p>
 </div>'''.format(IRX_GITHUB_URL, IR_ORIGINAL_GITHUB_URL)
     )
     label.setAlignment(Qt.AlignCenter)
