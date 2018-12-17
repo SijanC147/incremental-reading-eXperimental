@@ -1,1 +1,1 @@
-# incremental-reading-eXperimental
+# Incremental Reading 3 eXperimental (_IR3X_) for Anki 2.0
