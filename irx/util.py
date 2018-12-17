@@ -91,7 +91,7 @@ def update_label_opacity(evt, bg_label):
     )
     prev_opacity = prev_rgba_col[3]
     new_opacity = min(prev_opacity + 1, 100) if evt.delta(
-    ) > 30 else max(prev_opacity - 1, 30) if evt.delta() < -30 else prev_opacity
+    ) > 30 else max(prev_opacity - 1, 0) if evt.delta() < -30 else prev_opacity
     if prev_opacity != new_opacity:
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
 
@@ -316,29 +316,6 @@ def pretty_date(templ_format=None, invalid=None):
         return invalid if invalid else datetime.now().strftime(default)
 
 
-def addMenu(fullName):
-    if not hasattr(mw, 'customMenus'):
-        mw.customMenus = {}
-
-    if len(fullName.split('::')) == 2:
-        menuName, subMenuName = fullName.split('::')
-        hasSubMenu = True
-    else:
-        menuName = fullName
-        hasSubMenu = False
-
-    if menuName not in mw.customMenus:
-        menu = QMenu('&' + menuName, mw)
-        mw.customMenus[menuName] = menu
-        mw.form.menubar.insertMenu(
-            mw.form.menuTools.menuAction(), mw.customMenus[menuName]
-        )
-
-    if hasSubMenu and (fullName not in mw.customMenus):
-        subMenu = QMenu('&' + subMenuName, mw)
-        mw.customMenus[fullName] = subMenu
-        mw.customMenus[menuName].addMenu(subMenu)
-
 
 def db_log(data, title=None, lim=None):
     if not mw.db.editor.dialog.isVisible():
@@ -379,7 +356,7 @@ def add_menu_sep(menu_name):
 
 def addMenuItem(menuName, text, function, keys=None):
     action = QAction(text, mw)
-
+    action.setMenuRole(QAction.NoRole)
     if keys:
         action.setShortcut(QKeySequence(keys))
 
@@ -398,6 +375,29 @@ def addMenuItem(menuName, text, function, keys=None):
         mw.customMenus[menuName].addAction(action)
 
     return action
+
+def addMenu(fullName):
+    if not hasattr(mw, 'customMenus'):
+        mw.customMenus = {}
+
+    if len(fullName.split('::')) == 2:
+        menuName, subMenuName = fullName.split('::')
+        hasSubMenu = True
+    else:
+        menuName = fullName
+        hasSubMenu = False
+
+    if menuName not in mw.customMenus:
+        menu = QMenu('&' + menuName, mw)
+        mw.customMenus[menuName] = menu
+        mw.form.menubar.insertMenu(
+            mw.form.menuTools.menuAction(), mw.customMenus[menuName]
+        )
+
+    if hasSubMenu and (fullName not in mw.customMenus):
+        subMenu = QMenu('&' + subMenuName, mw)
+        mw.customMenus[fullName] = subMenu
+        mw.customMenus[menuName].addMenu(subMenu)
 
 
 def addShortcut(function, keys):

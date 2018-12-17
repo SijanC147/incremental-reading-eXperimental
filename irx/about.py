@@ -11,7 +11,7 @@ IR_ORIGINAL_GITHUB_URL = 'https://github.com/luoliyan/incremental-reading'
 IRX_GITHUB_URL = "https://github.com/SijanC147/incremental-reading-eXperimental"
 
 
-def showAbout():
+def showIrxAbout():
     dialog = QDialog(mw)
 
     label = QLabel()
@@ -27,7 +27,6 @@ def showAbout():
 <p>Joseph Lorimer</p>
 <p>Tiago Barroso, Frank Kmiec, Aleksej, Christian Weiß, Timothée Chauvin</p>
 <p>Who actively maintain the original <a href="{1}">IR add-on</a>, which is the foundation of this add-on.</p>
-<p><u>Everything</u> implemented in this add-on was only made possible through reverse-engineering the original to learn Qt.</p>
 <hr/>
 <p>The motivation behind this add-on was initially trying to port some of the v4 features to the</p>
 <p>Anki 2.0-compatible v3 version, for those who, like myself, aren't ready to make the Anki 2.1 leap just yet.</p>

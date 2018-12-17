@@ -22,7 +22,7 @@ from aqt.utils import showWarning, tooltip, showInfo
 
 from BeautifulSoup import BeautifulSoup
 
-from irx.about import showAbout
+from irx.about import showIrxAbout
 from irx.settings import SettingsManager
 from irx.schedule import Scheduler
 from irx.text import TextManager
@@ -63,7 +63,7 @@ class ReadingManager:
                 "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
                 "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
                 "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
-                "<b>Also take some time to have a look at the About menu, where I mention the original creators of the IR add-on whose work was the foundation for this add-on.</b>",
+                "<b>Please take some time to go through the About menu, where I mention the original creators of the IR add-on, whose work was the foundation for IR3X.</b>",
                 "Thanks again for giving this add-on a shot."
             ],
             parent=mw
@@ -82,7 +82,7 @@ class ReadingManager:
         disableOutdated()
 
         if not self.controlsLoaded:
-            addMenuItem("IR3X", "About IR3X", showAbout)
+            addMenuItem("IR3X", "About IR3X", showIrxAbout)
             add_menu_sep("IR3X")
             addMenuItem(
                 "IR3X::Quick Keys", "Manage", self.quickKeys.show_dialog
@@ -105,7 +105,6 @@ class ReadingManager:
                 "IR3X::Options", "Reset Info Message Flags",
                 lambda: self.settingsManager.reset_info_flags()
             )
-
             # addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             # addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             add_menu_sep("IR3X")
@@ -240,7 +239,7 @@ class ReadingManager:
         try:
             for field in re.findall(r"\{\{([^\s]+?)\}\}", question):
                 question = question.replace(
-                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"],
+                    "{{%s}}" % field, "{{%s}}" % self.settings.get(field.lower() + "Field", self.settings.get(field + "Field")),
                     1
                 )
         except KeyError as e:
@@ -250,7 +249,7 @@ class ReadingManager:
         try:
             for field in re.findall(r"\{\{([^\s]+?)\}\}", answer):
                 answer = answer.replace(
-                    "{{%s}}" % field, "{{%s}}" % self.settings[field + "Field"],
+                    "{{%s}}" % field, "{{%s}}" % self.settings.get(field.lower() + "Field", self.settings.get(field + "Field")),
                     1
                 )
         except KeyError as e:
