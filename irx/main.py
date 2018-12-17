@@ -286,7 +286,7 @@ class ReadingManager:
             if page_bottom == card_pos or page_bottom == 0:
                 self.toggle_space_scroll(False)
             irx_info_box(
-                flag_key='firstTimeViewing',
+                flag_key='firstTimeViewingIrxNote',
                 text="Important points to keep in mind.",
                 info_texts=[
                     "First off, thank you for trying out this add-on, you're awesome.",
