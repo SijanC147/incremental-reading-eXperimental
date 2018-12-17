@@ -17,7 +17,7 @@ from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QIma
 from BeautifulSoup import BeautifulSoup as bs4
 
 from aqt import mw
-from aqt.utils import showInfo
+from aqt.utils import showInfo, askUser
 
 DEFAULT_HIGHLIGHT = "rgba(255,225,26,60%)"
 
@@ -182,6 +182,9 @@ def compress_image(img_data, extension, max_size=None):
         thumb_data = buf.data()
     else:
         thumb_data = None
+    if extension.lower() == "gif" and save_size > max_size:
+        if not askUser("You are attempting to import a GIF image which is {0} above your set size limit of {1}. <br/><br/> You sure about this?".format(pretty_byte_value(save_size-max_size), pretty_byte_value(max_size))):
+            return None,None,None
     return compressed_data, compression_ratio, thumb_data
 
 
