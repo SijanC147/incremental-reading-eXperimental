@@ -13,7 +13,8 @@ from aqt.utils import showInfo
 
 from irx.util import (
     addMenuItem, removeComboBoxItem, setComboBoxItem, updateModificationTime,
-    mac_fix, db_log, keypress_capture_field, color_picker_label, addComboBoxItem
+    mac_fix, db_log, keypress_capture_field, color_picker_label,
+    addComboBoxItem, irx_info_box
 )
 from irx.editable_controls import REVIEWER_CONTROLS
 
@@ -135,6 +136,15 @@ class QuickKeys:
 
         self.dialog.setLayout(layout)
         self.dialog.setWindowTitle('IR3X Quick Keys')
+        irx_info_box(
+            flag_key='editingQuickKeys',
+            text="Editing Quick Keys",
+            info_texts=[
+                "Any highlight changes will only apply from this point forward.",
+                "Existing highlights will <b>not</b> be updated."
+            ],
+            parent=self.dialog
+        )
         self.dialog.exec_()
 
     def update_quick_keys_dialog(self):

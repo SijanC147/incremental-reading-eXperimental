@@ -30,7 +30,7 @@ from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
     viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha,
-    irx_file_path
+    irx_file_path, irx_info_box
 )
 from irx.view import ViewManager
 
@@ -75,10 +75,18 @@ class ReadingManager:
             )
             add_menu_sep("IR3X::Schedules")
             addMenuItem(
-                "IR3X", "Clean History",
+                "IR3X::Options", "Settings", self.settingsManager.show_settings
+            )
+            add_menu_sep("IR3X::Options")
+            addMenuItem(
+                "IR3X::Options", "Clean History",
                 lambda: self.textManager.clean_history(notify=True)
             )
-            addMenuItem("IR3X", "Settings", self.settingsManager.show_settings)
+            addMenuItem(
+                "IR3X::Options", "Reset Info Message Flags",
+                lambda: self.settingsManager.reset_info_flags()
+            )
+
             # addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             # addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             add_menu_sep("IR3X")
@@ -232,6 +240,25 @@ class ReadingManager:
             card_pos = self.settings['scroll'][str(cid)]
             if page_bottom == card_pos or page_bottom == 0:
                 self.toggle_space_scroll(False)
+            irx_info_box(
+                flag_key='firstTimeViewing',
+                text="Before we get started.",
+                info_texts=[
+                    "First off, thank you for trying out this add-on, you're awesome.",
+                    "Most text interaction functionality has been relatively stable as long as I stick these pointers:"+
+                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
+                        "Try to avoid having individual highlights that span large portions of the text, unless you will not be editing that portion further.",
+                        "Avoid having a lot of overlapping highlights/styles as this can cause problems when deciding which highlight/style to take precedence in the HTML.",
+                        "If you want to apply styles to highlighted chunks, it's usually better to style the text first, then highlight it.",
+                        "I highly recommend you highlight a chunk of text first then click on the link that is generated to edit that extract, instead of using the 'Edit Extract' functionality to skip a click.",
+                    ])),
+                    "If you're going for a stable experience, ideally avoid being over-adventurous.",
+                    "That being said, bug reports help me make this add-on better, so please report any and all of those at the github repo (linked through the About menu). I appreciate it!",
+                    "<u>Also take some time to have a look at the About menu, where I mention the original creators of the IR add-on whose work was the foundation for this add-on.</u>",
+                    "Check the Help menu for a list of your current control setup (editable through <code>editable_controls.py</code>), most of these controls should deactivate when you are not viewing IR3X notes.",
+                ],
+                parent=mw
+            )
 
     def init_javascript(self):
         mw.web.page().mainFrame().addToJavaScriptWindowObject(

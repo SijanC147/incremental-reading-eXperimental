@@ -11,8 +11,8 @@ from math import ceil
 from datetime import datetime
 import struct
 
-from PyQt4.QtCore import Qt, QBuffer, QEvent
-from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QLabel, QColor, QColorDialog, QApplication
+from PyQt4.QtCore import Qt, QBuffer, QEvent, QTimer
+from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent
 
 from BeautifulSoup import BeautifulSoup as bs4
 
@@ -20,7 +20,6 @@ from aqt import mw
 from aqt.utils import showInfo
 
 DEFAULT_HIGHLIGHT = "rgba(255,225,26,60%)"
-
 
 def color_picker_label(initial=None):
     initial = initial or DEFAULT_HIGHLIGHT
@@ -95,6 +94,36 @@ def update_label_opacity(evt, bg_label):
     ) > 30 else max(prev_opacity - 1, 30) if evt.delta() < -30 else prev_opacity
     if prev_opacity != new_opacity:
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
+
+def irx_info_box(flag_key, title=None, text=None, info_texts=None, modality=None, parent=None):
+    flag = mw.readingManager.settings['infoMsgFlags'].get(flag_key, True)
+    if not flag:
+        return
+    modality = modality or (Qt.NonModal if not parent else Qt.WindowModal)
+    msg_box = QMessageBox(parent or None)
+    msg_box.setWindowTitle(title or "IR3X")
+    msg_box.setIcon(QMessageBox.Information)
+    msg_box.setText("<b><i>Please Read</i></b><br/>" + ("<b>{}</b>".format(text) or ""))
+    msg_box.setInformativeText("<br/><br/>".join(info_texts) if info_texts else "")
+    ok_button = msg_box.addButton(QMessageBox.Ok)
+    dont_show_again_button = msg_box.addButton("Don't show again", QMessageBox.AcceptRole) 
+    msg_box.setDefaultButton(ok_button)
+    msg_box.setWindowModality(modality or Qt.NonModal)
+    def update_flag(flag_key, msg_box):
+        mw.readingManager.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
+    msg_box.hideEvent = lambda evt, f=flag_key, m=msg_box: update_flag(f, m)
+    if parent:
+        if not parent.isVisible():
+            def _mod_show(evt):
+                QShowEvent(evt)
+                parent.startTimer(150)
+            parent.showEvent = _mod_show
+            def _mod_info(evt, msg_box):
+                parent.killTimer(evt.timerId())
+                msg_box.exec_()
+            parent.timerEvent = lambda evt, m=msg_box: _mod_info(evt, m)
+        else:
+            msg_box.exec_()
 
 
 def irx_file_path(filename):
