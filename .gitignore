@@ -120,6 +120,7 @@ anki
 aqt
 .ipynb_checkpoints
 .python-version
-debug.*
+*.ipynb
 
 
+.style.yapf
