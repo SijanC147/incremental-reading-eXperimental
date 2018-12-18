@@ -4,4 +4,6 @@ aqt
 *.ipynb
 .ipynb_checkpoints
 .python-version
+.pylintrc
+.style.yapf
 debug.html
