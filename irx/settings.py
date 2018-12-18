@@ -31,10 +31,11 @@ from irx.util import (
 )
 
 from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
+from irx.info import INFO_MESSAGES
 
 
 REVIEWER_FUNCTIONS = {
-    "show help": lambda: mw.readingManagerX.settingsManager.show_help(),
+    "show help": lambda: mw.readingManagerX.settingsManager.show_controls(),
     "toggle images": lambda: mw.readingManagerX.textManager.toggle_images_sidebar(),
     "toggle formatting": lambda: mw.readingManagerX.textManager.toggle_show_formatting(),
     "toggle removed text": lambda: mw.readingManagerX.textManager.toggle_show_removed(),
@@ -133,7 +134,7 @@ class SettingsManager():
                 self.schedule_keys_action_format().keys()
         }
         if self.duplicate_controls:
-            self.show_help()
+            self.show_controls()
         addHook('unloadProfile', self.save_settings)
 
     def reset_info_flags(self):
@@ -161,6 +162,27 @@ class SettingsManager():
                     keys=str(anskey if anskey!= 10 else "") or None
                 )
             )
+    
+    def refresh_help_menu_items(self):
+        for action in mw.readingManagerX.help_menu_items:
+            mw.customMenus['IR3X::Help'].removeAction(action)
+        mw.readingManagerX.help_menu_items = []
+        invalid_flags = []
+        for info_flag in self.settings['infoMsgFlags']:
+            info_msg = INFO_MESSAGES.get(info_flag)
+            if not info_msg:
+                invalid_flags.append(info_flag)
+                continue
+            mw.readingManagerX.help_menu_items.append(
+                addMenuItem(
+                    menuName='IR3X::Help',
+                    text=info_msg.get('title', info_msg.get('text')),
+                    function=partial(irx_info_box, flag_key=info_flag, force=True)
+                )
+            )
+        for invalid_flag in invalid_flags:
+            del self.settings['infoMsgFlags'][invalid_flag]
+
 
     def build_control_map(self):
         irx_controls = {}
@@ -198,7 +220,7 @@ class SettingsManager():
         actions_keys_index.update(schedule_keys_actions)
         return actions_keys_index
 
-    def show_help(self):
+    def show_controls(self):
         help_dialog = QDialog(mw)
         help_cat_boxes = [
             self.make_help_group(
@@ -307,18 +329,7 @@ class SettingsManager():
 
         dialog.setLayout(main_layout)
         dialog.setWindowTitle('IR3X Settings')
-        irx_info_box(
-            flag_key='firstTimeViewingSettings',
-            text="IR3X Settings",
-            info_texts=[
-                "These should be quite self-explenatory, Zoom and Scroll settings work exactly the same as in the original add-on",
-                "The new settings allow you to define the maximum size for imported images which IR3X when compressing images.",
-                "The Auto-caption setting is used to define the atuomatic caption that is assigned to an image when IR3X cannot extract one from the clipboard.",
-                "This setting supports <code>strftime</code> formatting (click on the button next to the input for more info), a live preview is displayed below the input.",
-                "If the inputted template is invalid (error message displayed), any changes will be discarded."
-            ],
-            parent=dialog
-        )
+        irx_info_box('firstTimeViewingSettings',parent=dialog)
         if not dialog.exec_():
             return
         
@@ -611,25 +622,7 @@ class SettingsManager():
         self.schedules_dialog = QDialog(mw)
         self.schedules_dialog.setLayout(main_layout)
         self.schedules_dialog.setWindowTitle('IR3X Scheduling')
-        irx_info_box(
-            flag_key='firstTimeViewingSchedules',
-            text="How IR3X Schedules Work",
-            info_texts=[
-                "IR3X does away with the original highlight option in favor of extracts. In IR3X terms, <b>extracts = highlights = extracts</b>",
-                "This means that anything that is highlighted in an IR3X represents another note, which can be either another IR3X note or another type of Anki note",
-                "Schedules deal with the former, while the latter are configurable through Quick Keys.",
-                "When viewing IR3X text, extracts can be created by highlighting text and using the assigned <b>Answer Key</b>",
-                "Answer keys can be any value between 1 and 9. A schedule can also have no answer key assigned to it, in that case the schedule is considered <b>inactive</b>",
-                "You can still use an inactive schedule but only through the Schedules Menu, not through a keyboard shortcut.",
-                "Moreover, the primary difference is that <b>active schedules will also appear as answer buttons on the answer card</b>.",
-                "You can re-schedule an IR3X note before moving on to the next from the answer screen using the schedule answer key.",
-                "This means at any time you can have <b>up to 9 active schedules</b> as a way of assigning priorities to IR3X notes.",
-                "Finally, IR3X also tried to intelligently assign a title to an extract based on the title of its parent for efficiency.",
-                "Should you want to change this, all extracts also serve as hyperlinks to the created notes, clicking on them will open the editor to make any changes."
-            ],
-            modality=Qt.WindowModal,
-            parent=self.schedules_dialog
-        )
+        irx_info_box('firstTimeViewingSchedules',parent=self.schedules_dialog)
         self.schedules_dialog.exec_()
 
     def validate_and_save_schedules(self):
@@ -815,30 +808,12 @@ class SettingsManager():
         bg_edit_label = color_picker_label(schedule.get("bg"))
         _orig_press = bg_edit_label.mousePressEvent 
         def _mod_press(*args, **kwargs):
-            irx_info_box(
-                flag_key='editingScheduleHighlights',
-                text="Changing Schedules' Colors",
-                info_texts=[
-                    "Any highlight changes will only apply from this point forward.",
-                    "Existing highlights will <b>not</b> be updated."
-                ],
-                modality=Qt.WindowModal,
-                parent=self.schedules_dialog
-            )
+            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog)
             _orig_press(*args, **kwargs)
         bg_edit_label.mousePressEvent = _mod_press
         _orig_wheel = bg_edit_label.wheelEvent 
         def _mod_wheel(*args, **kwargs):
-            irx_info_box(
-                flag_key='editingScheduleHighlights',
-                text="Changing Schedules' Colors",
-                info_texts=[
-                    "Any highlight changes will only apply from this point forward.",
-                    "Existing highlights will <b>not</b> be updated."
-                ],
-                modality=Qt.WindowModal,
-                parent=self.schedules_dialog
-            )
+            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog)
             _orig_wheel(*args, **kwargs)
         bg_edit_label.wheelEvent = _mod_wheel
 

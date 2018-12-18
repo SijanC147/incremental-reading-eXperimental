@@ -40,34 +40,19 @@ class ReadingManager:
         self.controlsLoaded = False
         self.quickKeyActions = []
         self.schedule_key_actions = []
+        self.help_menu_items = []
         self.irx_specific_shortcuts = []
 
         addHook("profileLoaded", self.onProfileLoaded)
         addHook("reset", self.restore_view)
         addHook("showQuestion", self.restore_view)
+        addHook("showAnswer", self.first_time_answer_info)
         addHook("reviewCleanup", lambda: self.toggle_irx_controls(False))
 
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager()
         self.settings = self.settingsManager.settings
-        irx_info_box(
-            flag_key='firstTimeOpening',
-            text="Thank you for trying out IR3X!",
-            info_texts=[
-                "Seriously, I really appreciate it, you're awesome.",
-                "First off, you should find a new deck created (<code><b>{}</b></code>) this should be used to store all your IR3X notes.".format(self.settings['containerDeck']),
-                "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
-                "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
-                "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
-                "Check the Help menu for a list of your current control setup (editable through the <code><b>editable_controls.py</b></code> file in the addon folder)",
-                "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
-                "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
-                "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
-                "<b>Please take some time to go through the About menu, where I mention the original creators of the IR add-on, whose work was the foundation for IR3X.</b>",
-                "Thanks again for giving this add-on a shot."
-            ],
-            parent=mw
-        )
+        irx_info_box('firstTimeOpening')
         self.scheduler = Scheduler(self.settings)
         self.textManager = TextManager(self.settings)
         self.quickKeys = QuickKeys(self.settings)
@@ -98,25 +83,30 @@ class ReadingManager:
             )
             add_menu_sep("IR3X::Options")
             addMenuItem(
-                "IR3X::Options", "Clean History",
-                lambda: self.textManager.clean_history(notify=True)
+                "IR3X::Options", "Controls", self.settingsManager.show_controls
             )
             addMenuItem(
-                "IR3X::Options", "Reset Info Message Flags",
-                lambda: self.settingsManager.reset_info_flags()
+                "IR3X::Options", "Clean History",
+                lambda: self.textManager.clean_history(notify=True)
             )
             # addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
             # addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
             add_menu_sep("IR3X")
-            addMenuItem("IR3X", "Help", self.settingsManager.show_help)
+            addMenuItem("IR3X::Help", "Reset All Info Messages",self.settingsManager.reset_info_flags)
+            add_menu_sep("IR3X::Help")
             self.setup_irx_controls()
             self.controlsLoaded = True
 
         self.quickKeys.refresh_menu_items()
         self.settingsManager.refresh_schedule_menu_items()
+        self.settingsManager.refresh_help_menu_items()
         self.textManager.clean_history()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
+
+    def first_time_answer_info(self):
+        if viewingIrxText():
+            irx_info_box('firstTimeSeeingAnswers')
 
     def load_irx_container_deck(self):
         prev_container_deck = mw.col.decks.byName(self.settings['prevContainerDeck'])
@@ -284,21 +274,7 @@ class ReadingManager:
             card_pos = self.settings['scroll'][str(cid)]
             if page_bottom == card_pos or page_bottom == 0:
                 self.toggle_space_scroll(False)
-            irx_info_box(
-                flag_key='firstTimeViewingIrxNote',
-                text="Important points to keep in mind.",
-                info_texts=[
-                    "First off, thank you for trying out this add-on, you're awesome.",
-                    "Most text interaction functionality has been relatively stable as long as I stick these pointers:"+
-                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
-                        "Try to avoid having individual highlights that span large portions of the text, unless you will not be editing that portion further.",
-                        "Avoid having a lot of overlapping highlights/styles as this can cause problems when deciding which highlight/style to take precedence in the HTML.",
-                        "If you want to apply styles to highlighted chunks, it's usually better to style the text first, then highlight it.",
-                        "I highly recommend you highlight a chunk of text first then click on the link that is generated to edit that extract, instead of using the 'Edit Extract' functionality to skip a click.",
-                    ])),
-                ],
-                parent=mw
-            )
+            irx_info_box('firstTimeViewingIrxNote')
 
     def init_javascript(self):
         mw.web.page().mainFrame().addToJavaScriptWindowObject(

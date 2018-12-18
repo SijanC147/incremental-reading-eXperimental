@@ -19,6 +19,8 @@ from BeautifulSoup import BeautifulSoup as bs4
 from aqt import mw
 from aqt.utils import showInfo, askUser
 
+from irx.info import INFO_MESSAGES
+
 DEFAULT_HIGHLIGHT = "rgba(255,225,26,60%)"
 
 def color_picker_label(initial=None):
@@ -95,16 +97,18 @@ def update_label_opacity(evt, bg_label):
     if prev_opacity != new_opacity:
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
 
-def irx_info_box(flag_key, title=None, text=None, info_texts=None, modality=None, parent=None):
+def irx_info_box(flag_key, modality=None, parent=None, force=False):
     flag = mw.readingManagerX.settings['infoMsgFlags'].get(flag_key, True)
-    if not flag:
+    if not flag and not force:
         return
+    info_msg = INFO_MESSAGES[flag_key]
+    parent = parent or mw
     modality = modality or (Qt.NonModal if not parent else Qt.WindowModal)
-    msg_box = QMessageBox(parent or None)
-    msg_box.setWindowTitle(title or "IR3X")
+    msg_box = QMessageBox(parent)
+    msg_box.setWindowTitle(info_msg.get("title","IR3X"))
     msg_box.setIcon(QMessageBox.Information)
-    msg_box.setText("<b><i><u>Please Read</u></i></b><br/><br/>" + ("<b>{}</b>".format(text) or ""))
-    msg_box.setInformativeText("<br/><br/>".join(info_texts) if info_texts else "")
+    msg_box.setText("<b><i><u>Please Read</u></i></b><br/><br/>" + ("<b>{}</b>".format(info_msg.get("text", "")) or ""))
+    msg_box.setInformativeText("<br/><br/>".join(info_msg.get("info_texts", "")))
     ok_button = msg_box.addButton(QMessageBox.Ok)
     dont_show_again_button = msg_box.addButton("Don't show again", QMessageBox.AcceptRole) 
     msg_box.setDefaultButton(ok_button)
@@ -112,17 +116,22 @@ def irx_info_box(flag_key, title=None, text=None, info_texts=None, modality=None
     msg_box.setWindowOpacity(1)
     def update_flag(flag_key, msg_box):
         mw.readingManagerX.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
-    msg_box.hideEvent = lambda evt, f=flag_key, m=msg_box: update_flag(f, m)
+        mw.readingManagerX.settingsManager.refresh_help_menu_items()
+        msg_box.destroy()
+    msg_box.finished.connect(lambda r, f=flag_key, m=msg_box: update_flag(f, m))
     if parent:
         if not parent.isVisible():
-            def _mod_show(evt):
-                QShowEvent(evt)
-                parent.startTimer(150)
-            parent.showEvent = _mod_show
-            def _mod_info(evt, msg_box):
-                parent.killTimer(evt.timerId())
+            _orig_show = parent.showEvent
+            def _mod_show(evt, _orig, _p):
+                if not hasattr(_p, 'irx_timer_started') or not _p.irx_timer_started:
+                    _p.startTimer(150)
+                    _p.irx_timer_started = True
+                _orig(evt)
+            parent.showEvent = lambda evt, orig=_orig_show, p=parent: _mod_show(evt, orig, p)
+            def _mod_info(evt, msg_box, _p):
+                _p.killTimer(evt.timerId())
                 msg_box.exec_()
-            parent.timerEvent = lambda evt, m=msg_box: _mod_info(evt, m)
+            parent.timerEvent = lambda evt, m=msg_box, p=parent: _mod_info(evt, m, p)
         else:
             msg_box.exec_()
 
