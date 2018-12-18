@@ -30,12 +30,12 @@ from aqt.utils import getText, showInfo, tooltip
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
 from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image, irx_info_box
-from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 
 
 class TextManager:
-    def __init__(self, settings):
+    def __init__(self, settings, user_controls_config):
         self.settings = settings
+        self.user_controls_config = user_controls_config
         self.history_path = join(
             mw.pm.profileFolder(), "collection.media", "_irx_history.pkl"
         )
@@ -191,7 +191,7 @@ class TextManager:
 
         def key_handler(evt, _orig):
             key = unicode(evt.text())
-            if key == IMAGE_MANAGER_CONTROLS["toggle help"] or key in [k for k in REVIEWER_CONTROLS["show help"].split(" ") if len(k) == 1]:
+            if key == self.user_controls_config["image_manager"]["toggle help"] or key in [k for k in self.user_controls_config["reviewer"]["show help"].split(" ") if len(k) == 1]:
                 selected = self.image_list_widget.selectedItems()
                 if len(selected) == 1:
                     if image_label.isHidden():
@@ -200,14 +200,14 @@ class TextManager:
                     else:
                         image_label.hide()
                         image_manager_help_box.show()
-            elif key == IMAGE_MANAGER_CONTROLS["mark image(s) for deletion"]:
+            elif key == self.user_controls_config["image_manager"]["mark image(s) for deletion"]:
                 for selected in self.image_list_widget.selectedItems():
                     if selected.background() == std_bg:
                         selected.setBackground(del_bg)
                     elif selected.background() == del_bg:
                         selected.setBackground(std_bg)
                 self.image_list_widget.update()
-            elif key == IMAGE_MANAGER_CONTROLS["edit image caption"]:
+            elif key == self.user_controls_config["image_manager"]["edit image caption"]:
                 selected = self.image_list_widget.selectedItems()
                 if selected and len(selected) == 1:
                     selected_image = selected[0].data(Qt.UserRole)
@@ -222,15 +222,15 @@ class TextManager:
                         self.image_list_widget.update()
                 else:
                     showInfo("Can only edit 1 image at a time")
-            elif key == IMAGE_MANAGER_CONTROLS["take image(s) (for reordering)"]:
+            elif key == self.user_controls_config["image_manager"]["take image(s) (for reordering)"]:
                 for selected in self.image_list_widget.selectedItems():
                     if selected.background() == std_bg:
                         selected.setBackground(sel_bg)
                     elif selected.background() == sel_bg:
                         selected.setBackground(std_bg)
-            elif key in [IMAGE_MANAGER_CONTROLS["place image(s) above (for reordering)"], IMAGE_MANAGER_CONTROLS["place image(s) below (for reordering)"]]:
+            elif key in [self.user_controls_config["image_manager"]["place image(s) above (for reordering)"], self.user_controls_config["image_manager"]["place image(s) below (for reordering)"]]:
                 take_items = []
-                row_offset = 1 if key == IMAGE_MANAGER_CONTROLS["place image(s) below (for reordering)"] else 0
+                row_offset = 1 if key == self.user_controls_config["image_manager"]["place image(s) below (for reordering)"] else 0
                 for i in range(self.image_list_widget.count()):
                     if self.image_list_widget.item(i).background() == sel_bg:
                         self.image_list_widget.item(i).setBackground(std_bg)

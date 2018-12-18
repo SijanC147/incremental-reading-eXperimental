@@ -8,7 +8,7 @@ INFO_MESSAGES = {
             "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
             "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
             "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
-            "Check the Help menu for a list of your current control setup (editable through the <code><b>editable_controls.py</b></code> file in the addon folder)",
+            "Check the Help menu for a list of your current control setup (editable through the <code><b>ir3x.py</b></code> file in the addon folder)",
             "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
             "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
             "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
