@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from __future__ import unicode_literals, division
 from codecs import open
 from functools import partial
@@ -30,7 +28,6 @@ from irx.util import (
     pretty_byte_value, color_picker_label, irx_info_box
 )
 
-from irx.editable_controls import REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS
 from irx.info import INFO_MESSAGES
 
 
@@ -68,7 +65,8 @@ REVIEWER_FUNCTIONS = {
 
 
 class SettingsManager():
-    def __init__(self):
+    def __init__(self, user_controls_config):
+        self.user_controls_config = user_controls_config
         self.schedules = []
         self.settings_changed = False
         self.irx_controls, self.irx_actions = self.build_control_map()
@@ -186,18 +184,18 @@ class SettingsManager():
 
     def build_control_map(self):
         irx_controls = {}
-        for key, values in REVIEWER_CONTROLS.items():
+        for key, values in self.user_controls_config["reviewer"].items():
             for value in values.split(" "):
                 irx_controls[value] = REVIEWER_FUNCTIONS[key]
 
-        irx_actions = REVIEWER_CONTROLS
-        irx_actions.update(IMAGE_MANAGER_CONTROLS)
+        irx_actions = self.user_controls_config["reviewer"]
+        irx_actions.update(self.user_controls_config["image_manager"])
         return irx_controls, irx_actions
 
     def check_for_duplicate_controls(self):
         all_irx_actions = self.get_all_registered_irx_actions()
         keys = sum(
-            [values.split(" ") for key, values in all_irx_actions.items() if key not in IMAGE_MANAGER_CONTROLS.keys()], []
+            [values.split(" ") for key, values in all_irx_actions.items() if key not in self.user_controls_config["image_manager"].keys()], []
         )
         duplicate_controls = list(
             set([key for key in keys if keys.count(key) > 1])
@@ -246,7 +244,7 @@ class SettingsManager():
         button_box.accepted.connect(help_dialog.accept)
 
         def hide_help(evt, _orig):
-            if unicode(evt.text()) in REVIEWER_CONTROLS["show help"].split(" "):
+            if unicode(evt.text()) in self.user_controls_config["reviewer"]["show help"].split(" "):
                 help_dialog.accept()
             else:
                 return _orig(evt)

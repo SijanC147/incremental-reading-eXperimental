@@ -114,11 +114,14 @@ def irx_info_box(flag_key, modality=None, parent=None, force=False):
     msg_box.setDefaultButton(ok_button)
     msg_box.setWindowModality(modality or Qt.NonModal)
     msg_box.setWindowOpacity(1)
-    def update_flag(flag_key, msg_box):
-        mw.readingManagerX.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
+    def update_flag(flag_key, msg_box, force):
+        if not force:
+            mw.readingManagerX.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button
+        elif msg_box.clickedButton() == dont_show_again_button:
+            mw.readingManagerX.settings['infoMsgFlags'][flag_key] = False
         mw.readingManagerX.settingsManager.refresh_help_menu_items()
         msg_box.destroy()
-    msg_box.finished.connect(lambda r, f=flag_key, m=msg_box: update_flag(f, m))
+    msg_box.finished.connect(lambda r, f=flag_key, m=msg_box, force=force: update_flag(f, m, force))
     if parent:
         if not parent.isVisible():
             _orig_show = parent.showEvent
@@ -327,34 +330,37 @@ def pretty_date(templ_format=None, invalid=None):
 
 
 def db_log(data, title=None, lim=None):
-    if not mw.db.editor.dialog.isVisible():
-        mw.db.show()
-    if isinstance(data, dict):
-        mw.db.log(
-            "{0}{1} \n -----------------------------".format(
-                "{} \n".format(title) if title else "", "\n".join(
-                    [
-                        "{0}: {1}".format(k, v[:lim])
-                        if lim else "{0}: {1}".format(k, v)
-                        for k, v in data.items()
-                    ]
+    try:
+        if not mw.db.editor.dialog.isVisible():
+            mw.db.show()
+        if isinstance(data, dict):
+            mw.db.log(
+                "{0}{1} \n -----------------------------".format(
+                    "{} \n".format(title) if title else "", "\n".join(
+                        [
+                            "{0}: {1}".format(k, v[:lim])
+                            if lim else "{0}: {1}".format(k, v)
+                            for k, v in data.items()
+                        ]
+                    )
                 )
             )
-        )
-    elif isinstance(data, str):
-        data = data[:lim] if lim else data
-        mw.db.log(
-            "{0}{1} \n -----------------------------".format(
-                "{} \n".format(title) if title else "", data
+        elif isinstance(data, str):
+            data = data[:lim] if lim else data
+            mw.db.log(
+                "{0}{1} \n -----------------------------".format(
+                    "{} \n".format(title) if title else "", data
+                )
             )
-        )
-    else:
-        mw.db.log(
-            "{0}{1} \n -----------------------------".format(
-                "{} \n".format(title) if title else "",
-                str(data)[:lim] if lim else str(data)
+        else:
+            mw.db.log(
+                "{0}{1} \n -----------------------------".format(
+                    "{} \n".format(title) if title else "",
+                    str(data)[:lim] if lim else str(data)
+                )
             )
-        )
+    except:
+        return
 
 
 def add_menu_sep(menu_name):
