@@ -231,5 +231,18 @@ INFO_MESSAGES = {
             "When the Done button appears, it will be focused as the automatic answer triggered by the space button.",
             "Even when the Done button does not appear, the <b>0</b> answer key is reserved for it, so you can always use that to make an IR3X note as done, regardless of the scroll position you're at."
         ],
+    },
+    "firstTimeInTheEditor": {
+        "flag_key":'firstTimeInTheEditor',
+        "text": "Editing/Adding IR3X Notes",
+        "info_texts":[
+            "When adding or editing IR3X notes, <b>Title, Text and Source</b> can be edited freely, IR3X will never overwrite these fields.",
+            "<b>Date</b> is normally auto-generated, but you can edit this if you want, it is only used for your reference, nothing else.",
+            "The <b>Parent</b> field should ideally be left alone, since IR3X uses this along with the <b>PID</b> field, to provide a link to an IR3X notes' parent. If you edit one, you must update the other.",
+            "If you do edit the <b>PID</b> field, make sure to prefix the note id of the new parent with <code>irxnid:</code>, otherwise the link will not work.",
+            "The <b>Images field should <i>never</i> be edited</b>. There is a specific format that IR3X uses in this field to manage the images of an IR3X note. Any modifications should be carried out using the Image Manager.",
+            "The <b>Link</b> field is currently unused at the moment, however the plan is to have that field be auto-populated when the IR3X Web Importer is implemented, in due time...",
+            "<b>Tags</b> aren't used by IR3X for anything (so far), so feel free to edit them as you please."
+        ],
     }
 }

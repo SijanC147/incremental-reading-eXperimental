@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # IR3X for Anki 2.0 (Incremental Reading 3 eXperimental)
 #
 # ISC License

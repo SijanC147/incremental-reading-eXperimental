@@ -52,6 +52,7 @@ class ReadingManager:
         addHook("showQuestion", self.restore_view)
         addHook("showAnswer", self.first_time_answer_info)
         addHook("reviewCleanup", lambda: self.toggle_irx_controls(False))
+        addHook("setupEditorButtons", self.first_time_irx_editor)
 
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager(self.user_controls_config)
@@ -111,6 +112,10 @@ class ReadingManager:
     def first_time_answer_info(self):
         if viewingIrxText():
             irx_info_box('firstTimeSeeingAnswers')
+    
+    def first_time_irx_editor(self, editor):
+        if mw.col.models.current()['name'] == self.settings['modelName']:
+            irx_info_box("firstTimeInTheEditor", parent=editor.parentWindow)
 
     def load_irx_container_deck(self):
         prev_container_deck = mw.col.decks.byName(self.settings['prevContainerDeck'])
