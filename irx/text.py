@@ -66,58 +66,21 @@ class TextManager:
         self.save(linked_nid=attrs.get("link"))
 
     def style(self, styles):
-        irx_info_box(
-            flag_key='firstTimeStyling',
-            text="IR3X Styling Text",
-            info_texts=[
-                "Remember to try as much as possible to style text before extracting (highlighting) it for best results.",
-                "Text Styling visibility can be toggled using the 1st toggle on the IR3X HUD (colorful bar at the bottom of the note) or the assigned key shortcut."
-            ],
-            parent=mw
-        )
+        irx_info_box('firstTimeStyling')
         self.format_text_range({"styles": styles})
 
     def remove(self):
-        irx_info_box(
-            flag_key='firstTimeUndoing',
-            text="IR3X Removed Text",
-            info_texts=[
-                "Removal of text in an IR3X note is not permanent, by default removed text will disappear from the note.",
-                "Removed text visibility can be toggled using the 3rd toggle on the IR3X HUD (colorful bar at the bottom of the note) or the assigned key shortcut."
-            ],
-            parent=mw
-        )
+        irx_info_box('firstTimeRemovingText')
         self.format_text_range({"remove": ""})
 
     def link_note(self, note, schedule_name=None, bg_col=None):
         if schedule_name:
-            irx_info_box(
-                flag_key='firstTimeExtractingSchedule',
-                text="IR3X Extracts (Highlights)",
-                info_texts=[
-                    "Apart from highlighting the text, IR3X also creates a direct link to the note you just created.",
-                    "Clicking on this link automatically opens the editor and allows you to make any changes to the note",
-                    "IR3X generates titles using a numbering scheme starting from 1.<i>x</i>, where <i>x</i> is calculated based on the number of child extracts the parent has."
-                    "For subsequent extracts originating from the one of this notes' children, the title shall be 1.<i>x</i>.<i>y</i>, where <i>y</i> is the number of children that child has, and so on.."
-                    "Highlights (extracts) visibility can be toggled using the 2rd toggle on the IR3X HUD (colorful bar at the bottom of the note) or the assigned key shortcut."
-                ],
-                parent=mw
-            )
+            irx_info_box('firstTimeExtractingSchedule')
             sched = [s for s in self.settings["schedules"] if self.settings["schedules"][s]["name"] == schedule_name]
             if not sched:
                 raise ValueError("No schedule found with the following name: {}".format(schedule_name))
         else:
-            irx_info_box(
-                flag_key='firstTimeExtractingQuickKey',
-                text="IR3X Extracts (Highlights)",
-                info_texts=[
-                    "Apart from highlighting the text, IR3X also creates a direct link to the note you just created.",
-                    "Clicking on this link automatically opens the editor and allows you to make any changes to the note",
-                    "Fields for the generated note are filled according to the template settings you provide",
-                    "Highlights (extracts) visibility can be toggled using the 2rd toggle on the IR3X HUD (colorful bar at the bottom of the note) or the assigned key shortcut."
-                ],
-                parent=mw
-            )
+            irx_info_box('firstTimeExtractingQuickKey')
         self.format_text_range(
             {
                 "bg": rgba_percent_to_decimal_alpha(bg_col or self.settings["schedules"][sched[0]]["bg"]),
@@ -142,28 +105,7 @@ class TextManager:
         mw.reviewer.card.note().flush()
 
     def manage_images(self, note=None):
-        irx_info_box(
-            flag_key='firstTimeOpeningImageManager',
-            text="Using the Image Manager",
-            info_texts=[
-                "Some very basic functionality to interact with the imported images of a note is accessible through this Manager.",
-                "The manager will not appear if no images have been imported for the current note (ie the images sidebar is empty).",
-                "When open the image manager allows you to "+
-                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
-                        "Change the order of the images",
-                        "Change the caption of an image",
-                        "Delete an image"
-                    ])),
-                "The way this is achieved is by first <b>marking the images you intend on moving or deleting</b>",
-                "Images marked for deletion will appear with a red background in the list (unless selected, in that case the blue overrides that, but they are still <i>marked for deletion</i>)",
-                "Images marked for moving will appear in a different color blue (distinguishable from the selected items color)",
-                "You can then move to the desired location and move the selected images <b> above or below </b> that position",
-                "Your set controls for the image manager will appear any time you select multiple images, or can be manually toggled using the toggle help key (default: ?)",
-                "Hitting <b>Enter</b> will close the image manager and submit the changes, while <b>Esc</b> will discards the changes",
-                "Any changes made can always be undone."
-            ],
-            parent=mw
-        )
+        irx_info_box('firstTimeOpeningImageManager')
         note = note or mw.reviewer.card.note()
         soup = bs(getField(note, self.settings["imagesField"]))
 
@@ -475,45 +417,8 @@ class TextManager:
             self.link_note(new_note, schedule_name=schedule_name)
 
     def extract_image(self, remove_src=False, skip_captions=False):
-        irx_info_box(
-            flag_key='importingImagesOne',
-            text="Importing Images to IR3X notes",
-            info_texts=[
-                "IR3X allows you to <b>import images</b> from your clipboard to an IR3X note, this image will then appear in the images sidebar, and automatically be inherited by any <b>new</b> child IR3X extracts",
-                "There are two approaches to importing images, " +
-                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
-                                "Importing from raw image data stored in the clipboard, this is usually faster, but can have unexpected results if the image is not a JPEG, since this is what IR3X defaults to with this approach.",
-                                "Alternatively, IR3X can parse html data from your clipboard, look for any <code>img</code> elements and download these images in the background, deducing the appropriate type from the link",
-                            ])), 
-                "The second approach is preferred as IR3X will also search for any text content in the html to try and auto-caption the imported images, otherwise a caption is auto-generated based on your <b>auto-caption</b> setting.",
-                "Moreover, this approach includes specific code for handling wikipedia images, following thumbnail links to automatically download the full resolution image and get the image description (if available).",
-                "For each image, IR3X also generates creates an incredibly small thumbnail version to use as the preview in an IR3X note, this keeps Anki performant as the number of imported images increases.",
-                "Clicking on the thumbnail in an IR3X note will open the actual higher resolution image that is stored in your Anki collection, while the caption serves as a hyperlink to the original source for the image online (where applicable).",
-                "IR3X will carry out multiple compression runs until the image is at, or below, your specified <b>max image size</b>, while maintaining as much quality as possible",
-                "For this reason, this process can take a while, while IR3X finds the best compression rate for each image, larger sized images will naturally take longer.",
-                "Anki may appear unresponsive during this time, this is usually temporary, while it fetches the image data in the background.",
-                "It is <b>highly</b> recommended to let the image importing process do it's thing before you proceed.",
-                "Also, while it is possible to import multiple images at one go, importing images one at a time is usually more stable and allows IR3X to extract automatic captions more effectively."
-            ],
-            parent=mw
-        )
-        irx_info_box(
-            flag_key='importingImagesTwo',
-            text="One More Thing...",
-            info_texts=[
-                "I know, I know this one was a long one, but bear with me, just one note on <b>GIF</b>s",
-                "IR3X also supports importing GIF images, animation and all, with just a few caveats" +
-                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
-                        "I couldn't really figure out how to handle GIF data using Qt without losing the animation information, which is the whole point, this is definitely possible but wasn't feasible at the time."
-                        "So as to preserve the animation information, you should <b>always use the second approach</b> (copying a selection not the image) for importing GIFs.",
-                        "This way IR3X can determine that it is a GIF, and will skip compression and thumbnail generation (since these are done through Qt, which would remove any animation), and save the GIF as is.",
-                    ])), 
-                "Bear in mind that this means that while your GIFs will look good on your note, these undergo <b>no compression at all</b>.",
-                "This can not only make your collection size larger than what is desireable, but also make the IR3X note less responsive since Anki has to render the full size image, not a thumbnail version.",
-                "That being said, most GIFs are themselves usually small in size, and IR3X should warn you before importing a GIF that goes above your set size limit."
-            ],
-            parent=mw
-        )
+        irx_info_box('importingImagesOne')
+        irx_info_box('importingImagesTwo')
         if mw.web.selectedText():
             mw.web.triggerPageAction(QWebPage.Copy)
         else:
@@ -618,17 +523,7 @@ class TextManager:
             self._write_history()
 
     def undo(self, show_tooltip=True):
-        irx_info_box(
-            flag_key='firstTimeUndoing',
-            text="IR3X Undo History",
-            info_texts=[
-                "IR3X maintains a <b>persistent note history</b>, this means that you can always undo all all your IR3X actions even after you close Anki.",
-                "To avoid getting this history cluttered, IR3X automatically prunes it every time anki starts, removing entries for notes that have been deleted, you can also do this manually through the Options menu.",
-                "IR3X also keeps track of any extract notes that are created for each action and automatically deletes those notes when undoing that action, letting you know in the tooltip that appears.",
-                "Removal of text in an IR3X note is not permanent, by default removed text will disappear from the note, however <b>removed text</b> visibility settings can be toggled.",
-            ],
-            parent=mw
-        )
+        irx_info_box('firstTimeUndoing')
         current_note = mw.reviewer.card.note()
         current_note_title = getField(current_note, "Title")
         history = self.history.get(current_note.id)
