@@ -58,8 +58,8 @@ class ReadingManager:
         self.settings = self.settingsManager.settings
         irx_info_box('firstTimeOpening')
         self.scheduler = Scheduler(self.settings)
-        self.textManager = TextManager(self.settings)
-        self.quickKeys = QuickKeys(self.settings)
+        self.textManager = TextManager(self.settings, self.user_controls_config)
+        self.quickKeys = QuickKeys(self.settings, self.user_controls_config)
         mw.viewManager = ViewManager(self.settings)
 
         self.copy_missing_files()

@@ -16,12 +16,12 @@ from irx.util import (
     mac_fix, db_log, keypress_capture_field, color_picker_label,
     addComboBoxItem, irx_info_box
 )
-from irx.editable_controls import REVIEWER_CONTROLS
 
 
 class QuickKeys:
-    def __init__(self, settings):
+    def __init__(self, settings, user_controls_config):
         self.settings = settings
+        self.user_controls_config = user_controls_config
 
     def refresh_menu_items(self):
         for action in mw.readingManagerX.quickKeyActions:
@@ -357,7 +357,7 @@ class QuickKeys:
         ]
         if key_combo.lower() in irx_controls:
             conflicting_action = [
-                k for k, v in REVIEWER_CONTROLS.items()
+                k for k, v in self.user_controls_config['reviewer'].items()
                 if key_combo.lower() in v.lower()
             ][0]
             showInfo(
