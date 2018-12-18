@@ -10,6 +10,8 @@ from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication, QShortcut, QKeySequence
 from PyQt4.QtWebKit import QWebPage
 
+from BeautifulSoup import BeautifulSoup
+
 from anki import notes
 from anki.hooks import addHook, wrap, remHook
 from anki.sound import clearAudioQueue
@@ -19,8 +21,6 @@ from aqt.editcurrent import EditCurrent
 from aqt.reviewer import Reviewer
 from aqt.overview import Overview
 from aqt.utils import showWarning, tooltip, showInfo
-
-from BeautifulSoup import BeautifulSoup
 
 from irx.about import showIrxAbout
 from irx.settings import SettingsManager
@@ -87,7 +87,7 @@ class ReadingManager:
             )
             add_menu_sep("IR3X::Options")
             addMenuItem(
-                "IR3X::Options", "Controls", self.settingsManager.show_controls
+                "IR3X::Options", "Show Controls", self.settingsManager.show_controls
             )
             addMenuItem(
                 "IR3X::Options", "Clean History",

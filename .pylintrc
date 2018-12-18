@@ -1,0 +1,8 @@
+[MASTER]
+ignored-modules=PyQt4
+
+[MESSAGES-CONTROL]
+disable=W0108,E0611,W0611,format
+
+[VARIABLES]
+additional-builtins=_
