@@ -36,7 +36,11 @@ from irx.view import ViewManager
 
 
 class ReadingManager:
-    def __init__(self):
+    def __init__(self, reviewer_controls, image_manager_controls):
+        self.user_controls_config = {
+            "reviewer": reviewer_controls,
+            "image_manager": image_manager_controls,
+        }
         self.controlsLoaded = False
         self.quickKeyActions = []
         self.schedule_key_actions = []
@@ -50,7 +54,7 @@ class ReadingManager:
         addHook("reviewCleanup", lambda: self.toggle_irx_controls(False))
 
     def onProfileLoaded(self):
-        self.settingsManager = SettingsManager()
+        self.settingsManager = SettingsManager(self.user_controls_config)
         self.settings = self.settingsManager.settings
         irx_info_box('firstTimeOpening')
         self.scheduler = Scheduler(self.settings)

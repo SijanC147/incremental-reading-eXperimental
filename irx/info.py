@@ -1,20 +1,20 @@
 INFO_MESSAGES = {
     'firstTimeOpening': {
-            "flag_key":'firstTimeOpening',
-            "text":"Thank you for trying out IR3X!",
-            "info_texts":[
-                "Seriously, I really appreciate it, you're awesome.",
-                "First off, you should find a new deck created (<code><b>~IR3X</b></code>) this should be used to store all your IR3X notes.",
-                "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
-                "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
-                "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
-                "Check the Help menu for a list of your current control setup (editable through the <code><b>editable_controls.py</b></code> file in the addon folder)",
-                "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
-                "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
-                "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
-                "<b>Please take some time to go through the About menu, where I mention the original creators of the IR add-on, whose work was the foundation for IR3X.</b>",
-                "Thanks again for giving this add-on a shot."
-            ],
+        "flag_key":'firstTimeOpening',
+        "text":"Thank you for trying out IR3X!",
+        "info_texts":[
+            "Seriously, I really appreciate it, you're awesome.",
+            "First off, you should find a new deck created (<code><b>~IR3X</b></code>) this should be used to store all your IR3X notes.",
+            "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
+            "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
+            "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
+            "Check the Help menu for a list of your current control setup (editable through the <code><b>editable_controls.py</b></code> file in the addon folder)",
+            "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
+            "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
+            "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
+            "<b>Please take some time to go through the About menu, where I mention the original creators of the IR add-on, whose work was the foundation for IR3X.</b>",
+            "Thanks again for giving this add-on a shot."
+        ],
     },
     'firstTimeViewingIrxNote': {
         "flag_key":'firstTimeViewingIrxNote',
@@ -94,20 +94,20 @@ INFO_MESSAGES = {
     },
     'firstTimeViewingSchedules' : {
         "flag_key":'firstTimeViewingSchedules',
-                "text":"How IR3X Schedules Work",
-                "info_texts":[
-                    "IR3X does away with the original highlight option in favor of extracts. In IR3X terms, <b>extracts = highlights = extracts</b>",
-                    "This means that anything that is highlighted in an IR3X represents another note, which can be either another IR3X note or another type of Anki note",
-                    "Schedules deal with the former, while the latter are configurable through Quick Keys.",
-                    "When viewing IR3X text, extracts can be created by highlighting text and using the assigned <b>Answer Key</b>",
-                    "Answer keys can be any value between 1 and 9. A schedule can also have no answer key assigned to it, in that case the schedule is considered <b>inactive</b>",
-                    "You can still use an inactive schedule but only through the Schedules Menu, not through a keyboard shortcut.",
-                    "Moreover, the primary difference is that <b>active schedules will also appear as answer buttons on the answer card</b>.",
-                    "You can re-schedule an IR3X note before moving on to the next from the answer screen using the schedule answer key.",
-                    "This means at any time you can have <b>up to 9 active schedules</b> as a way of assigning priorities to IR3X notes.",
-                    "Finally, IR3X also tried to intelligently assign a title to an extract based on the title of its parent for efficiency.",
-                    "Should you want to change this, all extracts also serve as hyperlinks to the created notes, clicking on them will open the editor to make any changes."
-                ],
+        "text":"How IR3X Schedules Work",
+        "info_texts":[
+            "IR3X does away with the original highlight option in favor of extracts. In IR3X terms, <b>extracts = highlights = extracts</b>",
+            "This means that anything that is highlighted in an IR3X represents another note, which can be either another IR3X note or another type of Anki note",
+            "Schedules deal with the former, while the latter are configurable through Quick Keys.",
+            "When viewing IR3X text, extracts can be created by highlighting text and using the assigned <b>Answer Key</b>",
+            "Answer keys can be any value between 1 and 9. A schedule can also have no answer key assigned to it, in that case the schedule is considered <b>inactive</b>",
+            "You can still use an inactive schedule but only through the Schedules Menu, not through a keyboard shortcut.",
+            "Moreover, the primary difference is that <b>active schedules will also appear as answer buttons on the answer card</b>.",
+            "You can re-schedule an IR3X note before moving on to the next from the answer screen using the schedule answer key.",
+            "This means at any time you can have <b>up to 9 active schedules</b> as a way of assigning priorities to IR3X notes.",
+            "Finally, IR3X also tried to intelligently assign a title to an extract based on the title of its parent for efficiency.",
+            "Should you want to change this, all extracts also serve as hyperlinks to the created notes, clicking on them will open the editor to make any changes."
+        ],
     },
     'editingScheduleHighlights':{ 
         "flag_key":'editingScheduleHighlights',
@@ -155,25 +155,25 @@ INFO_MESSAGES = {
         ],
     },
     'firstTimeOpeningImageManager':{ 
-            "flag_key":'firstTimeOpeningImageManager',
-            "text":"Using the Image Manager",
-            "info_texts":[
-                "Some very basic functionality to interact with the imported images of a note is accessible through this Manager.",
-                "The manager will not appear if no images have been imported for the current note (ie the images sidebar is empty).",
-                "When open the image manager allows you to "+
-                    "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
-                        "Change the order of the images",
-                        "Change the caption of an image",
-                        "Delete an image"
-                    ])),
-                "The way this is achieved is by first <b>marking the images you intend on moving or deleting</b>",
-                "Images marked for deletion will appear with a red background in the list (unless selected, in that case the blue overrides that, but they are still <i>marked for deletion</i>)",
-                "Images marked for moving will appear in a different color blue (distinguishable from the selected items color)",
-                "You can then move to the desired location and move the selected images <b> above or below </b> that position",
-                "Your set controls for the image manager will appear any time you select multiple images, or can be manually toggled using the toggle help key (default: ?)",
-                "Hitting <b>Enter</b> will close the image manager and submit the changes, while <b>Esc</b> will discards the changes",
-                "Any changes made can always be undone."
-            ],
+        "flag_key":'firstTimeOpeningImageManager',
+        "text":"Using the Image Manager",
+        "info_texts":[
+            "Some very basic functionality to interact with the imported images of a note is accessible through this Manager.",
+            "The manager will not appear if no images have been imported for the current note (ie the images sidebar is empty).",
+            "When open the image manager allows you to "+
+                "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
+                    "Change the order of the images",
+                    "Change the caption of an image",
+                    "Delete an image"
+                ])),
+            "The way this is achieved is by first <b>marking the images you intend on moving or deleting</b>",
+            "Images marked for deletion will appear with a red background in the list (unless selected, in that case the blue overrides that, but they are still <i>marked for deletion</i>)",
+            "Images marked for moving will appear in a different color blue (distinguishable from the selected items color)",
+            "You can then move to the desired location and move the selected images <b> above or below </b> that position",
+            "Your set controls for the image manager will appear any time you select multiple images, or can be manually toggled using the toggle help key (default: ?)",
+            "Hitting <b>Enter</b> will close the image manager and submit the changes, while <b>Esc</b> will discards the changes",
+            "Any changes made can always be undone."
+        ],
     },
     'importingImagesOne':{ 
         "flag_key":'importingImagesOne',
