@@ -19,7 +19,7 @@ def showIrxAbout():
         '''
 <div style="text-align: center">
 <p style="font-weight: bold; font-size: 16px;">Incremental Reading 3 eXperimental</p>
-<p> v3.8.3x-beta </p>
+<p> v0.0.1-beta </p>
 <p> Sean Bugeja </p>
 <p> <a href="{0}">Github</a> </p>
 <hr/>
