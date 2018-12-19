@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
 from collections import defaultdict
 import os
 import urllib2
+from urllib import quote
 import re
 import time
 from codecs import open
@@ -568,15 +570,16 @@ class TextManager:
             "url": url,
             "thumb": thumb_src or src
         }
-        template = "<div class='irx-img-container' id='{id}'><br/><a href='{src}'><img src='{thumb}' irx-src='{thumb}' onerror='irxOnImgError(this);'/>"
-        template += "</a><a href='{url}'>" if url else "</a>"
-        template += "<span class='irx-caption'>{caption}</span>"
-        template += "</a></div>" if url else "</div>"
+        template = '<div class="irx-img-container" id="{id}"><br/><a href="{src}"><img src="{thumb}" irx-src="{thumb}" onerror="irxOnImgError(this);"/>'
+        template += '</a><a href="{url}">' if url else '</a>'
+        template += '<span class="irx-caption">{caption}</span>'
+        template += '</a></div>' if url else '</div>'
         return template.format(**content)
 
     def _save_image_to_col(self, image_data, filename, ext):
         media = mw.col.media
         identifier = None
+        filename = filename.replace("\"","")
         filepath = media.stripIllegal(filename)
         if not isinstance(image_data, str): #it's already a QImage
             buf = QBuffer()

@@ -3,6 +3,7 @@
 from __future__ import unicode_literals, division
 import sys
 import os
+from os.path import exists
 import io
 import stat
 import time
@@ -12,7 +13,10 @@ from datetime import datetime
 import struct
 
 from PyQt4.QtCore import Qt, QBuffer, QEvent, QTimer
-from PyQt4.QtGui import QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent
+from PyQt4.QtGui import (
+    QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QPixmap,
+    QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent
+)
 
 from BeautifulSoup import BeautifulSoup as bs4
 
@@ -97,7 +101,7 @@ def update_label_opacity(evt, bg_label):
     if prev_opacity != new_opacity:
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
 
-def irx_info_box(flag_key, modality=None, parent=None, force=False):
+def irx_info_box(flag_key, modality=None, parent=None, force=False, icon=None):
     flag = mw.readingManagerX.settings['infoMsgFlags'].get(flag_key, True)
     if not flag and not force:
         return
@@ -106,7 +110,6 @@ def irx_info_box(flag_key, modality=None, parent=None, force=False):
     modality = modality or (Qt.NonModal if not parent else Qt.WindowModal)
     msg_box = QMessageBox(parent)
     msg_box.setWindowTitle(info_msg.get("title","IR3X"))
-    msg_box.setIcon(QMessageBox.Information)
     msg_box.setText("<b><i><u>Please Read</u></i></b><br/><br/>" + ("<b>{}</b>".format(info_msg.get("text", "")) or ""))
     msg_box.setInformativeText("<br/><br/>".join(info_msg.get("info_texts", "")))
     ok_button = msg_box.addButton(QMessageBox.Ok)
@@ -114,6 +117,10 @@ def irx_info_box(flag_key, modality=None, parent=None, force=False):
     msg_box.setDefaultButton(ok_button)
     msg_box.setWindowModality(modality or Qt.NonModal)
     msg_box.setWindowOpacity(1)
+    icon_file = irx_file_path(icon or "information.png")
+    if not exists(icon_file):
+        icon_file = irx_file_path("information.png")
+    msg_box.setIconPixmap(QPixmap(icon_file))
     def update_flag(flag_key, msg_box, force):
         if not force:
             mw.readingManagerX.settings['infoMsgFlags'][flag_key] = msg_box.clickedButton() != dont_show_again_button

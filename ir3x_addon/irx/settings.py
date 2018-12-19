@@ -14,7 +14,7 @@ from PyQt4.QtGui import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox,
     QTabWidget, QVBoxLayout, QWidget, QDesktopServices, QColorDialog, QColor,
-    QIcon, QLayout, QSlider
+    QIcon, QLayout, QSlider, QMessageBox, QPixmap
 )
 
 from anki.hooks import addHook
@@ -220,6 +220,8 @@ class SettingsManager():
 
     def show_controls(self):
         help_dialog = QDialog(mw)
+        if not hasattr(self, "dev_counter") and not self.settings.get('isDev', False):
+            self.dev_counter = 5
         help_cat_boxes = [
             self.make_help_group(
                 cat, acts, self.get_all_registered_irx_actions()
@@ -246,6 +248,21 @@ class SettingsManager():
         def hide_help(evt, _orig):
             if unicode(evt.text()) in self.user_controls_config["reviewer"]["show help"].split(" "):
                 help_dialog.accept()
+            elif unicode(evt.text()) == "d" and not self.settings.get('isDev', False):
+                if self.dev_counter >= 0:
+                    self.dev_counter -= 1
+                else:
+                    self.settings['isDev'] = True
+                    msg_box = QMessageBox(help_dialog)
+                    msg_box.setWindowTitle("IR3X Developer")
+                    msg_box.setText("IR3X Developer Menu Unlocked")
+                    msg_box.setInformativeText("Restart Anki to apply.")
+                    ok_button = msg_box.addButton(QMessageBox.Ok)
+                    msg_box.setDefaultButton(ok_button)
+                    msg_box.setWindowModality(Qt.WindowModal)
+                    msg_box.setWindowOpacity(1)
+                    msg_box.setIconPixmap(QPixmap(irx_file_path("repair.png")))
+                    msg_box.exec_()
             else:
                 return _orig(evt)
 
@@ -253,6 +270,8 @@ class SettingsManager():
         help_dialog.keyPressEvent = lambda evt: hide_help(evt, orig_dialog_handler)
 
         help_dialog.exec_()
+        if hasattr(self, "dev_counter"):
+            del self.dev_counter
 
     def make_help_group(self, category, actions=None, keys_index=None):
         keys_index = keys_index or self.get_all_registered_irx_actions()
@@ -554,7 +573,8 @@ class SettingsManager():
                 },
             'scroll': {},
             'zoom': {},
-            'infoMsgFlags': {}
+            'infoMsgFlags': {},
+            'gettingStarted': True,
         }
 
         self.media_dir = os.path.join(mw.pm.profileFolder(), 'collection.media')
@@ -806,12 +826,12 @@ class SettingsManager():
         bg_edit_label = color_picker_label(schedule.get("bg"))
         _orig_press = bg_edit_label.mousePressEvent 
         def _mod_press(*args, **kwargs):
-            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog)
+            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog, icon="alert.png")
             _orig_press(*args, **kwargs)
         bg_edit_label.mousePressEvent = _mod_press
         _orig_wheel = bg_edit_label.wheelEvent 
         def _mod_wheel(*args, **kwargs):
-            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog)
+            irx_info_box('editingScheduleHighlights',parent=self.schedules_dialog, icon="alert.png")
             _orig_wheel(*args, **kwargs)
         bg_edit_label.wheelEvent = _mod_wheel
 
@@ -821,7 +841,7 @@ class SettingsManager():
         remove_button = QPushButton()
         remove_button.setEnabled(rem)
         remove_button.clicked.connect(lambda evt: remove_schedule(sched_id))
-        remove_button.setIcon(QIcon(irx_file_path("cancel.png")))
+        remove_button.setIcon(QIcon(irx_file_path("trash.png")))
         layout = QHBoxLayout()
         layout.addWidget(name_widget)
         layout.addWidget(value_edit_box)

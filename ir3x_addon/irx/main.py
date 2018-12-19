@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 # pylint: disable=W0212
 from __future__ import unicode_literals
 
 import re
 import operator
-from os import listdir
-from os.path import join, exists
+import pickle
+import base64
+from os import listdir, makedirs
+from os.path import join, exists, dirname, splitext
 
 from PyQt4.QtCore import QObject, pyqtSlot, Qt
 from PyQt4.QtGui import QApplication, QShortcut, QKeySequence
@@ -15,12 +18,13 @@ from BeautifulSoup import BeautifulSoup
 from anki import notes
 from anki.hooks import addHook, wrap, remHook
 from anki.sound import clearAudioQueue
+from anki.exporting import TextNoteExporter
 from aqt import mw, dialogs
 from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
 from aqt.reviewer import Reviewer
 from aqt.overview import Overview
-from aqt.utils import showWarning, tooltip, showInfo
+from aqt.utils import showWarning, tooltip, showInfo, getSaveFile, getFile
 
 from irx.about import showIrxAbout
 from irx.settings import SettingsManager
@@ -30,7 +34,7 @@ from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
     viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha,
-    irx_file_path, irx_info_box
+    irx_file_path, irx_info_box, timestamp_id
 )
 from irx.view import ViewManager
 
@@ -57,7 +61,6 @@ class ReadingManager:
     def onProfileLoaded(self):
         self.settingsManager = SettingsManager(self.user_controls_config)
         self.settings = self.settingsManager.settings
-        irx_info_box('firstTimeOpening')
         self.scheduler = Scheduler(self.settings)
         self.textManager = TextManager(self.settings, self.user_controls_config)
         self.quickKeys = QuickKeys(self.settings, self.user_controls_config)
@@ -94,8 +97,11 @@ class ReadingManager:
                 "IR3X::Options", "Clean History",
                 lambda: self.textManager.clean_history(notify=True)
             )
-            # addMenuItem("IR3X::Dev", "Organizer", self.scheduler.show_organizer)
-            # addMenuItem("IR3X::Dev", "Update Model", self.setup_irx_model)
+            if self.settings.get('isDev', False):
+                addMenuItem("IR3X::Developer", "Organizer", self.scheduler.show_organizer)
+                addMenuItem("IR3X::Developer", "Update Model", self.setup_irx_model)
+                addMenuItem("IR3X::Developer", "Export IR3X Note", self.export_irx_note)
+                addMenuItem("IR3X::Developer", "Import IR3X Note", self.import_irx_note)
             add_menu_sep("IR3X")
             addMenuItem("IR3X::Help", "Reset All Info Messages",self.settingsManager.reset_info_flags)
             add_menu_sep("IR3X::Help")
@@ -108,6 +114,8 @@ class ReadingManager:
         self.textManager.clean_history()
         mw.viewManager.resetZoom("deckBrowser")
         self.monkey_patch_other_addons()
+        self.create_getting_started_deck()
+        irx_info_box('firstTimeOpening')
 
     def first_time_answer_info(self):
         if viewingIrxText():
@@ -129,9 +137,7 @@ class ReadingManager:
                 if mw.col:
                     mw.maybeReset()
             container_deck = mw.col.decks.byName(self.settings['containerDeck'])
-            if container_deck:
-                tooltip("<b>IR3X</b>: Created container deck, {}".format(self.settings['containerDeck']))
-            else:
+            if not container_deck:
                 problem = True
         elif not container_deck and prev_container_deck:
             try:
@@ -149,9 +155,88 @@ class ReadingManager:
             showWarning("There was a problem setting up the IR3X container Deck, you could create the deck yourself, using the name {}".format(self.settings['containerDeck']))
         else:
             self.settings['prevContainerDeck'] = self.settings['containerDeck']
+        return not problem
+
+    def create_getting_started_deck(self):
+        if not self.settings['gettingStarted']:
+            return
+        container_deck = mw.col.decks.byName(self.settings['containerDeck'])
+        if not container_deck:
+            if not self.load_irx_container_deck():
+                return
+        container_deck = mw.col.decks.byName(self.settings['containerDeck'])
+        getting_started_deck_name = "{0}::Getting Started".format(self.settings['containerDeck'])
+        getting_started_deck = mw.col.decks.byName(getting_started_deck_name)
+        if not getting_started_deck:
+            try:
+                mw.col.decks.id(getting_started_deck_name)
+                mw.requireReset()
+            finally:
+                if mw.col:
+                    mw.maybeReset()
+        getting_started_deck = mw.col.decks.byName(getting_started_deck_name)
+        if not getting_started_deck:
+            return
+        getting_stated_file_path = irx_file_path("_getting_started.irx")
+        self.import_irx_note(getting_stated_file_path, getting_started_deck["id"])
+        self.settings['gettingStarted'] = False
+
+    def import_irx_note(self, filepath=None, did=None):
+        model = mw.col.models.byName(self.settings["modelName"])
+        did = did or mw.col.decks.byName(self.settings['containerDeck'])["id"]
+        irx_note_file = filepath or getFile(
+            parent=mw,
+            title="Import IR3X Note",
+            cb=None,
+            filter="*.irx",
+            key="",
+        )
+        content = pickle.load(open(irx_note_file, "rb"))
+        new_note = notes.Note(mw.col, model)
+        for key,value in content.items():
+            if key != "media":
+                setField(new_note, self.settings[key], value or "")
+            else:
+                for filename, data in value.items():
+                    mw.col.media.writeData(unicode(filename), data)
+        new_note.model()["did"] = did
+        mw.col.addNote(new_note)
+        mw.reset()
+    
+    def export_irx_note(self):
+        current_note = mw.reviewer.card.note()
+        export = {f:v for f,v in current_note.items()}
+        agnostic_export = {}
+        irx_fields = {k:v for k,v in self.settings.items() if k[-5:]=="Field"}
+        for key in export:
+            agnostic_key = [k for k,v in irx_fields.items() if v==key][0]
+            agnostic_export[agnostic_key] = export[key]
+        
+        filenames = mw.col.media.filesInStr(
+            mid=current_note.model()["id"],
+            string=(agnostic_export["textField"] + agnostic_export["imagesField"]),
+        )
+        agnostic_export["media"] = {
+            str(filename): open(filename, "rb").read() for filename in filenames
+        }
+        export_filename = "{0}_{1}.irx".format(agnostic_export["titleField"].replace(" ", "_"), timestamp_id())
+        export_path = irx_file_path(join("exports", export_filename))
+        if not exists(dirname(export_path)):
+            makedirs(dirname(export_path))
+        target = getSaveFile(
+            parent=mw,
+            title="Export IR3X Note",
+            dir_description=dirname(export_path),
+            key="IR3X Note File",
+            ext="irx",
+            fname=export_filename
+        )
+        if target:
+            pickle.dump(agnostic_export, open(target, "wb"), pickle.HIGHEST_PROTOCOL)
+            tooltip("<b>IR3X</b>: Note Exported")
 
     def copy_missing_files(self):
-        for req_file in [f for f in listdir(irx_file_path()) if f[0] == "_"]:
+        for req_file in [f for f in listdir(irx_file_path()) if f.startswith("_irx")]:
             if not exists(join(mw.col.media.dir(), req_file)):
                 mw.col.media.writeData(
                     req_file,
@@ -165,7 +250,12 @@ class ReadingManager:
                 self.irx_specific_shortcuts.append(shortcut)
         self.controls_state = False
         self.space_scroll = QShortcut(QKeySequence("space"), mw)
-        self.space_scroll.activated.connect(lambda: mw.viewManager.pageDown())
+
+        def space_scroll_info():
+            irx_info_box("spaceBarFunctionIntro")
+            mw.viewManager.pageDown()
+
+        self.space_scroll.activated.connect(space_scroll_info)
         self.space_scroll.setEnabled(False)
         self.toggle_irx_controls(self.controls_state, notify=False)
 
@@ -221,9 +311,11 @@ class ReadingManager:
 
     def setup_irx_model(self):
         model = mw.col.models.new(self.settings["modelName"])
-        for key, value in self.settings.items():
-            if key[-5:] == "Field":
-                mw.col.models.addField(model, mw.col.models.newField(value))
+        irx_fields = [
+            "title","text","date","source", "link","parent","pid","images"
+        ]
+        for irx_field in irx_fields:
+            mw.col.models.addField(model, mw.col.models.newField(self.settings[irx_field+"Field"]))
         model["css"] = loadFile('web', 'model.css')
         template = self.make_irx_template(
             name="IRX Card",

@@ -136,14 +136,22 @@ class QuickKeys:
         _orig_press = self.bg_edit_label.mousePressEvent
 
         def _mod_press(*args, **kwargs):
-            irx_info_box('editingQuickKeysHighlights', parent=self.dialog)
+            irx_info_box(
+                'editingQuickKeysHighlights',
+                parent=self.dialog,
+                icon="alert.png"
+            )
             _orig_press(*args, **kwargs)
 
         self.bg_edit_label.mousePressEvent = _mod_press
         _orig_wheel = self.bg_edit_label.wheelEvent
 
         def _mod_wheel(*args, **kwargs):
-            irx_info_box('editingQuickKeysHighlights', parent=self.dialog)
+            irx_info_box(
+                'editingQuickKeysHighlights',
+                parent=self.dialog,
+                icon="alert.png"
+            )
             _orig_wheel(*args, **kwargs)
 
         self.bg_edit_label.wheelEvent = _mod_wheel

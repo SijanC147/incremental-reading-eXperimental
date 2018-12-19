@@ -37,8 +37,8 @@ div.irx-grad {
     position:fixed; 
     top:30px;
     background: -webkit-gradient(linear, left bottom, left top, color-stop(0%,rgba(242, 243, 244, 0)), color-stop(95%,rgba(242, 243, 244,1)));
-    background: -webkit-linear-gradient(to bottom,  rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
-    background: linear-gradient(to bottom,  rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
+    background: -webkit-linear-gradient(bottom, rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
+    background: linear-gradient(to top, rgba(242, 243, 244, 0) 0%,rgba(242, 243, 244,1) 90%);
 }
 
 div.irx-overlay-controls {

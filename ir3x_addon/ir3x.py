@@ -56,7 +56,7 @@ REVIEWER_CONTROLS = {
     "done (suspend)": "!",
     "undo": "u",
     "add image": "@",
-    "add image (skip caption)": "Shift+@",
+    "add image (skip caption)": "^",
     "extract image": "m",
     "extract image (skip caption)": "q",
     "bold": "Ctrl+b",

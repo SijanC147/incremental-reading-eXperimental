@@ -135,7 +135,9 @@ class Scheduler:
     def mark_card_info(self, cards_info, mark=None, mark_fn=None, card=None):
         mark = "[{}] ".format(mark or "*")
         card = card or mw.reviewer.card
-        cond = mark_fn if mark_fn else (lambda c_info: c_info["id"] == card.id)
+        cond = mark_fn if mark_fn else (
+            lambda c_info: c_info.get("id") == card.id if card else None
+        )
         for (index, card_info) in enumerate(cards_info):
             if cond(card_info):
                 cards_info[index]["title"] = mark + card_info["title"]
