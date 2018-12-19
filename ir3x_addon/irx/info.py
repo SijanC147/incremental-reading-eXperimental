@@ -5,7 +5,7 @@ INFO_MESSAGES = {
         "info_texts":[
             "Seriously, I really appreciate it, you're awesome.",
             "You should have a new deck created, (<code><b>~IR3X</b></code>), this should be used to store all your IR3X notes. There should also be <b>getting started</b> IR3X note to get going.",
-            "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
+            "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results.",
             "I highly recommend reading through these boxes at least once when they show up.",
             "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, you can bring it up again from the Help menu.",
             "All of the IR3X controls (editable through the <code><b>ir3x.py</b></code> file in the addon folder) are accessible through the Options menu.",
