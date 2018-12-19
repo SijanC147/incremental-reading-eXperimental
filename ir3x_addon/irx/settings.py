@@ -43,10 +43,6 @@ REVIEWER_FUNCTIONS = {
     "import image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(skip_captions=True),
     "extract image": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True),
     "extract image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True, skip_captions=True),
-    # "extract important": lambda: mw.readingManagerX.textManager.extract(schedule_name="soon"),
-    # "extract complimentary": lambda: mw.readingManagerX.textManager.extract(schedule_name="later"),
-    # "extract important (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="soon"),
-    # "extract complimentary (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="later"),
     "bold": lambda: mw.readingManagerX.textManager.style("bold"),
     "underline": lambda: mw.readingManagerX.textManager.style("underline"),
     "italic": lambda: mw.readingManagerX.textManager.style("italic"),
@@ -202,9 +198,9 @@ class SettingsManager():
         )
         if duplicate_controls:
             showInfo(
-                """IR3X made an oopsie! Found some conflicting hotkey settings. <br/><br/>\
+                """Found some conflicting control settings. <br/><br/>\
                 I'll bring up the help menu which'll highlight the conflicting keys in red <br/><br/>\
-                Review your <code>editable_controls.py</code> file, quick keys settings or schedule answer keys. <br/><br/>""",
+                Review your <code>ir3x.py</code> file, quick-key settings or schedule answer keys. <br/><br/>""",
                 type="warning",
                 title="IR3X Controls"
             )
@@ -246,7 +242,7 @@ class SettingsManager():
         button_box.accepted.connect(help_dialog.accept)
 
         def hide_help(evt, _orig):
-            if unicode(evt.text()) in self.user_controls_config["reviewer"]["show help"].split(" "):
+            if unicode(evt.text()) in self.user_controls_config["reviewer"]["show controls"].split(" "):
                 help_dialog.accept()
             elif unicode(evt.text()) == "d" and not self.settings.get('isDev', False):
                 if self.dev_counter >= 0:
@@ -256,7 +252,7 @@ class SettingsManager():
                     msg_box = QMessageBox(help_dialog)
                     msg_box.setWindowTitle("IR3X Developer")
                     msg_box.setText("IR3X Developer Menu Unlocked")
-                    msg_box.setInformativeText("Restart Anki to apply.")
+                    msg_box.setInformativeText("Restart Anki for changes to take effect.")
                     ok_button = msg_box.addButton(QMessageBox.Ok)
                     msg_box.setDefaultButton(ok_button)
                     msg_box.setWindowModality(Qt.WindowModal)

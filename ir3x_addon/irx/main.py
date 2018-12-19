@@ -104,6 +104,7 @@ class ReadingManager:
                 "IR3X::Options", "Report Issue", report_irx_issue)
 
             if self.settings.get('isDev', False):
+                add_menu_sep("IR3X")
                 addMenuItem("IR3X::Developer", "Organizer", self.scheduler.show_organizer)
                 addMenuItem("IR3X::Developer", "Update Model", self.setup_irx_model)
                 addMenuItem("IR3X::Developer", "Export IR3X Note", self.export_irx_note)
