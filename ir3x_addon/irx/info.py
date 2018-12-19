@@ -4,14 +4,13 @@ INFO_MESSAGES = {
         "text":"Thank you for trying out IR3X!",
         "info_texts":[
             "Seriously, I really appreciate it, you're awesome.",
-            "First off, you should find a new deck created (<code><b>~IR3X</b></code>) this should be used to store all your IR3X notes.",
+            "You should have a new deck created, (<code><b>~IR3X</b></code>), this should be used to store all your IR3X notes. There should also be <b>getting started</b> IR3X note to get going.",
             "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
-            "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
-            "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
-            "All of the IR3X controls according to your setup (editable through the <code><b>ir3x.py</b></code> file in the addon folder) are accessible through the Options menu.",
+            "I highly recommend reading through these boxes at least once when they show up.",
+            "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, you can bring it up again from the Help menu.",
+            "All of the IR3X controls (editable through the <code><b>ir3x.py</b></code> file in the addon folder) are accessible through the Options menu.",
             "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
-            "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
-            "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
+            "Bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those using the Issue Reporter in the Options menu. I appreciate it!",
             "<b>Please take some time to go through the About menu, where I mention the original creators of the IR add-on, whose work was the foundation for IR3X.</b>",
             "Thanks again for giving this add-on a shot."
         ],
