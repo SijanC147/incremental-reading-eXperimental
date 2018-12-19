@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
+from aqt import mw
+import irx.main
+
 # IR3X for Anki 2.0 (Incremental Reading 3 eXperimental)
 #
 # ISC License
@@ -41,22 +46,22 @@
 #   using a space eg.
 #
 #    ...
-#       "show help": "? Meta+h i", // assigns three keys for the "show help" action.
+#       "show controls": "? Meta+h i", // assigns three keys for the "show controls" action.
 #    ...
 #
 #   IR3X will notify you of any conflicts that it finds on load, and should bring up
 #   the help menu to highlight which controls are in conflict.
 
 REVIEWER_CONTROLS = {
-    "show help": "?",
+    "show controls": "?",
     "toggle images": "Meta+m",
     "toggle formatting": "Meta+f",
     "toggle removed text": "Meta+z",
     "toggle extracts": "Meta+x",
     "done (suspend)": "!",
     "undo": "u",
-    "add image": "@",
-    "add image (skip caption)": "^",
+    "import image": "@",
+    "import image (skip caption)": "^",
     "extract image": "m",
     "extract image (skip caption)": "q",
     "bold": "Ctrl+b",
@@ -76,7 +81,7 @@ REVIEWER_CONTROLS = {
 }
 
 IMAGE_MANAGER_CONTROLS = {
-    "toggle help": "?",
+    "toggle controls": "?",
     "edit image caption": "e",
     "mark image(s) for deletion": "d",
     "take image(s) (for reordering)": "t",
@@ -86,9 +91,6 @@ IMAGE_MANAGER_CONTROLS = {
 }
 
 ############################## END OF USER CONFIG #############################
-
-from aqt import mw
-import irx.main
 
 mw.readingManagerX = irx.main.ReadingManager(
     REVIEWER_CONTROLS, IMAGE_MANAGER_CONTROLS

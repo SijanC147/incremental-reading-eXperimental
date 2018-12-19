@@ -8,7 +8,7 @@ INFO_MESSAGES = {
             "I've tried to place these information boxes at important parts of the IR3X user experience to explain how it works and how to <i>hopefully</i> get the best results."
             "I highly recommend reading through these boxes at least once when they show up, you can subsequently prevent them from showing up agian.",
             "To avoid skipping an info box by mistake, the default option is set to OK, if you still skip over an info box by mistake, the flags for all info boxes can be reset from the IR3X Options menu.",
-            "Check the Help menu for a list of your current control setup (editable through the <code><b>ir3x.py</b></code> file in the addon folder)",
+            "All of the IR3X controls according to your setup (editable through the <code><b>ir3x.py</b></code> file in the addon folder) are accessible through the Options menu.",
             "Most of these controls deactivate when you are not viewing IR3X notes in an effort to avoid collisions, a tooltip appears when the IR3X controls toggle on/off",
             "If you're gunning for the most stable experience, I would recommend not being too over-adventurous.",
             "That being said, bug reports help me make this add-on better, which I am intent on doing, so please report any and all of those at the github repo (link in the About menu). I appreciate it!",
@@ -89,7 +89,10 @@ INFO_MESSAGES = {
             "The new settings allow you to define the maximum size for imported images which IR3X when compressing images.",
             "The Auto-caption setting is used to define the atuomatic caption that is assigned to an image when IR3X cannot extract one from the clipboard.",
             "This setting supports <code>strftime</code> formatting (click on the button next to the input for more info), a live preview is displayed below the input.",
-            "If the inputted template is invalid (error message displayed), any changes will be discarded."
+            "If the inputted template is invalid (error message displayed), any changes will be discarded.",
+            "When enabled, the IR3X error handler will intercept any errors thrown by Anki and try to deduce if it is to blame for the error.", 
+            "If IR3X is to blame, it will automatically open up its issue reporter with the traceback information for that error auto-populated, you can then review this information and add to it, before submitting an issue.",
+            "Errors not originating from IR3X are forwarded to Anki as normal."
         ],
     },
     'firstTimeViewingSchedules' : {
@@ -170,7 +173,7 @@ INFO_MESSAGES = {
             "Images marked for deletion will appear with a red background in the list (unless selected, in that case the blue overrides that, but they are still <i>marked for deletion</i>)",
             "Images marked for moving will appear in a different color blue (distinguishable from the selected items color)",
             "You can then move to the desired location and move the selected images <b> above or below </b> that position",
-            "Your set controls for the image manager will appear any time you select multiple images, or can be manually toggled using the toggle help key (default: ?)",
+            "Your set controls for the image manager will appear any time you select multiple images, or can be manually toggled using the toggle controls key (default: ?)",
             "Hitting <b>Enter</b> will close the image manager and submit the changes, while <b>Esc</b> will discards the changes",
             "Any changes made can always be undone."
         ],
@@ -198,9 +201,9 @@ INFO_MESSAGES = {
     },
     'importingImagesTwo':{ 
         "flag_key":'importingImagesTwo',
-        "text":"One More Thing...",
+        "text":"Importing GIFs",
         "info_texts":[
-            "I know, I know this one was a long one, but bear with me, just one note on <b>GIF</b>s",
+            "I know, I know, this was a long one, but bear with me, just one note on <b>GIF</b>s",
             "IR3X also supports importing GIF images, animation and all, with just a few caveats" +
                 "<ul>{}</ul>".format("".join("<li>{}</li>".format(p) for p in [
                     "I couldn't really figure out how to handle GIF data using Qt without losing the animation information, which is the whole point, this is definitely possible but wasn't feasible at the time."
@@ -252,6 +255,19 @@ INFO_MESSAGES = {
             "When viewing an IR3X note, the <b>Space bar is remapped to Page Down</b> so long as there is more to scroll down to",
             "As soon as you <b>reach the end</b> of the IR3X note, the <b>Space bar switches back</b> to showing the answer card (the re-scheduling screen for IR3X)",
             "At any time, regardless of the scroll position, you can use <b>Shift+Space</b> (configurable through <code>ir3x.py</code>), which always defaults to showing the answer card.",
+        ],
+    },
+    'firstTimeReportingIssue': {
+        "flag_key": 'firstTimeSpaceQuestion',
+        "text": "The IR3X Issue Reporter",
+        "info_texts":[
+            "To make reporting issues as easy as possible, you can input all of the information here.", 
+            "When you're done, clicking the submit button will automatically <b>open up the IR3X issues page and copy your issue to your clipboard</b> formatted neatly into a template",
+            "The issue template will contain the description you provide, the system information as displayed in the dialog, and the traceback if IR3X is responding to an exception it generated.",
+            "You can set IR3X to intercept traceback information for exceptions it generates from the settings menu.",
+            "You just have to paste this information into the issue box on Github, and provide a title for your issue, and that's should be it.",
+            "Thank you for helping me make this add-on better.",
+            "<b>Only the information that you see in the fields below is copied to the clipboard, and you can further review this information before submitting an issue to make sure that there is no sensitive information</b>",
         ],
     },
 }

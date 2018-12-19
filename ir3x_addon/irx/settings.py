@@ -32,21 +32,21 @@ from irx.info import INFO_MESSAGES
 
 
 REVIEWER_FUNCTIONS = {
-    "show help": lambda: mw.readingManagerX.settingsManager.show_controls(),
+    "show controls": lambda: mw.readingManagerX.settingsManager.show_controls(),
     "toggle images": lambda: mw.readingManagerX.textManager.toggle_images_sidebar(),
     "toggle formatting": lambda: mw.readingManagerX.textManager.toggle_show_formatting(),
     "toggle removed text": lambda: mw.readingManagerX.textManager.toggle_show_removed(),
     "toggle extracts": lambda: mw.readingManagerX.textManager.toggle_show_extracts(),
     "done (suspend)": lambda: mw.readingManagerX.scheduler.done_with_note(),
     "undo": lambda: mw.readingManagerX.textManager.undo(),
-    "add image": lambda: mw.readingManagerX.textManager.extract_image(),
-    "add image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(skip_captions=True),
+    "import image": lambda: mw.readingManagerX.textManager.extract_image(),
+    "import image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(skip_captions=True),
     "extract image": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True),
     "extract image (skip caption)": lambda: mw.readingManagerX.textManager.extract_image(remove_src=True, skip_captions=True),
-    "extract important": lambda: mw.readingManagerX.textManager.extract(schedule_name="soon"),
-    "extract complimentary": lambda: mw.readingManagerX.textManager.extract(schedule_name="later"),
-    "extract important (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="soon"),
-    "extract complimentary (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="later"),
+    # "extract important": lambda: mw.readingManagerX.textManager.extract(schedule_name="soon"),
+    # "extract complimentary": lambda: mw.readingManagerX.textManager.extract(schedule_name="later"),
+    # "extract important (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="soon"),
+    # "extract complimentary (and edit)": lambda: mw.readingManagerX.textManager.extract(also_edit=True, schedule_name="later"),
     "bold": lambda: mw.readingManagerX.textManager.style("bold"),
     "underline": lambda: mw.readingManagerX.textManager.style("underline"),
     "italic": lambda: mw.readingManagerX.textManager.style("italic"),
@@ -83,7 +83,7 @@ class SettingsManager():
                     "undo",
                     "done (suspend)",
                     "next card",
-                    "show help",
+                    "show controls",
                     "show reading list",
                     "show image manager",
                 ],
@@ -97,8 +97,8 @@ class SettingsManager():
                 [
                     "extract image",
                     "extract image (skip caption)",
-                    "add image",  #todo rename this to import image
-                    "add image (skip caption)",
+                    "import image",
+                    "import image (skip caption)",
                 ],
             "Visual Elements":
                 [
@@ -109,7 +109,7 @@ class SettingsManager():
                 ],
             "Image Manager":
                 [
-                    "toggle help",
+                    "toggle controls",
                     "edit image caption",
                     "mark image(s) for deletion",
                     "take image(s) (for reordering)",
@@ -336,12 +336,18 @@ class SettingsManager():
         captioning_widget = QWidget()
         captioning_widget.setLayout(captioning_layout)
 
+        error_handler_layout = QVBoxLayout()
+        error_handler_layout.addWidget(self.create_error_handling_group_box())
+        error_handler_widget = QWidget()
+        error_handler_widget.setLayout(error_handler_layout)
+
         button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         button_box.accepted.connect(dialog.accept)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(zoom_scroll_widget)
         main_layout.addWidget(captioning_widget)
+        main_layout.addWidget(error_handler_widget)
         main_layout.addWidget(button_box)
 
         dialog.setLayout(main_layout)
@@ -360,8 +366,29 @@ class SettingsManager():
         )
         self.settings['captionFormat'] = self.image_caption_edit_box.text(
         ) if test_caption_format != 'invalid' else self.settings['captionFormat']
+        self.settings['useIrxErrorHandler'] = self.irx_error_handler_checkbox.isChecked()
 
         mw.viewManager.resetZoom(mw.state)
+
+    def create_error_handling_group_box(self):
+        parent_layout = QVBoxLayout()
+
+        self.irx_error_handler_checkbox = QCheckBox("Let IR3X try to intercept its own Issues")
+        self.irx_error_handler_checkbox.setChecked(self.settings.get("useIrxErrorHandler", False))
+        self.irx_error_handler_checkbox.setLayoutDirection(Qt.LayoutDirectionAuto)
+        irx_error_handler_label = QLabel("When active, IR3X will intercept all exceptions and try to figure out if it was to blame. In which case an error reporting dialog is open instead of the usual Anki error dialog.")
+        irx_error_handler_label.setAlignment(Qt.AlignLeft)
+        irx_error_handler_label.setWordWrap(True)
+        
+
+        parent_layout.addWidget(self.irx_error_handler_checkbox)
+        parent_layout.addWidget(irx_error_handler_label)
+
+        group_box = QGroupBox("Error Handling")
+        group_box.setLayout(parent_layout)
+
+        return group_box
+
 
     def create_image_caption_group_box(self):
         parent_layout = QVBoxLayout()

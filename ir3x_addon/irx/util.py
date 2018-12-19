@@ -8,16 +8,19 @@ import io
 import stat
 import time
 import re
+import platform
 from math import ceil
 from datetime import datetime
 import struct
 
-from PyQt4.QtCore import Qt, QBuffer, QEvent, QTimer
+from PyQt4.QtCore import Qt, QBuffer, QEvent, QTimer, QUrl
 from PyQt4.QtGui import (
     QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QPixmap,
-    QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent
+    QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent, 
+    QDialog, QVBoxLayout, QTextEdit, QDesktopServices, QClipboard, QHBoxLayout
 )
 
+from anki import version as anki_version
 from BeautifulSoup import BeautifulSoup as bs4
 
 from aqt import mw
@@ -26,6 +29,15 @@ from aqt.utils import showInfo, askUser
 from irx.info import INFO_MESSAGES
 
 DEFAULT_HIGHLIGHT = "rgba(255,225,26,60%)"
+
+ISSUE_TEMPLATE = """\
+### Description
+{desc}
+### System Specs
+{specs}
+### Traceback
+{trace_back}
+"""
 
 def color_picker_label(initial=None):
     initial = initial or DEFAULT_HIGHLIGHT
@@ -100,6 +112,83 @@ def update_label_opacity(evt, bg_label):
     ) > 30 else max(prev_opacity - 1, 0) if evt.delta() < -30 else prev_opacity
     if prev_opacity != new_opacity:
         bg_label.set_rgba(prev_rgba_col[:3] + (new_opacity, ))
+
+def report_irx_issue(trace_back=None):
+    report_dialog = QDialog(mw)
+    report_dialog.setWindowTitle("IR3X made an Oopsie")
+
+    parent_layout = QHBoxLayout()
+
+    error_icon = QLabel()
+    error_icon.setPixmap(QPixmap(irx_file_path("error.png")))
+    error_icon.setAlignment(Qt.AlignCenter)
+    sub_label = QLabel("Sorry about that.")
+    sub_label.setStyleSheet("QLabel { font-size: 18px; margin: 10px } ")
+    sub_label.setAlignment(Qt.AlignCenter)
+
+    display_layout = QVBoxLayout()
+    display_layout.setAlignment(Qt.AlignCenter)
+    display_layout.addWidget(error_icon)
+    display_layout.addWidget(sub_label)
+
+    form_layout = QVBoxLayout()
+    desc_label = QLabel("Problem Description")
+    desc_input = QTextEdit("What was going on when this happened?")
+    desc_input.setFixedSize(200,150)
+    desc_input.focusInEvent = lambda evt: desc_input.selectAll()
+    specs_label = QLabel("System Info")
+    specs_input = QTextEdit()
+    specs_input.setHtml("<b>Platform:</b> {0}<br/> <b>Anki</b>: {1}<br/>".format(platform.platform(), anki_version))
+    specs_input.setFixedSize(200, 75)
+    form_layout.addWidget(desc_label)
+    form_layout.addWidget(desc_input)
+    form_layout.addWidget(specs_label)
+    form_layout.addWidget(specs_input)
+    if trace_back:
+        trace_back_label = QLabel("Traceback")
+        trace_back_input = QTextEdit()
+        trace_back_input.setHtml(trace_back.replace("\n", "<br/>"))
+        trace_back_input.setFixedSize(200,150)
+        form_layout.addWidget(trace_back_label)
+        form_layout.addWidget(trace_back_input)
+
+    submit_button = QPushButton("Submit Issue")
+    submit_button.clicked.connect(report_dialog.accept)
+    submit_button.setToolTip(mac_fix("Ctrl + Enter"))
+    cancel_button = QPushButton("Discard")
+    cancel_button.clicked.connect(report_dialog.reject)
+
+    submit_shortcut_return = QShortcut(submit_button)
+    submit_shortcut_return.setKey(QKeySequence(Qt.CTRL + Qt.Key_Return))
+    submit_shortcut_return.activated.connect(report_dialog.accept)
+    submit_shortcut_enter = QShortcut(submit_button)
+    submit_shortcut_enter.setKey(QKeySequence(Qt.CTRL + Qt.Key_Enter))
+    submit_shortcut_enter.activated.connect(report_dialog.accept)
+    buttons_layout = QHBoxLayout()
+    buttons_layout.addWidget(submit_button)
+    buttons_layout.addWidget(cancel_button)
+
+    form_layout.addLayout(buttons_layout)
+
+    parent_layout.addLayout(display_layout)
+    parent_layout.addLayout(form_layout)
+
+    report_dialog.setLayout(parent_layout)
+    desc_input.setFocus(Qt.ActiveWindowFocusReason)
+    desc_input.setFocusPolicy(Qt.StrongFocus)
+    irx_info_box('firstTimeReportingIssue', parent=report_dialog)
+    if report_dialog.exec_():
+        clipboard = QApplication.clipboard()
+        issue_str = ISSUE_TEMPLATE.format(
+            desc=desc_input.toPlainText() or "",
+            specs=specs_input.toPlainText(),
+            trace_back=(trace_back_input.toPlainText() if trace_back else "Not Applicable")
+        )
+        if not trace_back:
+            issue_str = issue_str[:issue_str.index("\n### Traceback")]
+        clipboard.setText(issue_str, QClipboard.Clipboard)
+        QDesktopServices.openUrl(QUrl("https://github.com/SijanC147/incremental-reading-eXperimental/issues"))
+
 
 def irx_info_box(flag_key, modality=None, parent=None, force=False, icon=None):
     flag = mw.readingManagerX.settings['infoMsgFlags'].get(flag_key, True)

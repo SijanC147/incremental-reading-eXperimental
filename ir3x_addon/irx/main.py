@@ -6,6 +6,7 @@ import re
 import operator
 import pickle
 import base64
+import cgi
 from os import listdir, makedirs
 from os.path import join, exists, dirname, splitext
 
@@ -34,7 +35,7 @@ from irx.quick_keys import QuickKeys
 from irx.util import (
     addMenuItem, addShortcut, disableOutdated, getField, isIrxCard, setField,
     viewingIrxText, loadFile, db_log, add_menu_sep, rgba_remove_alpha,
-    irx_file_path, irx_info_box, timestamp_id
+    irx_file_path, irx_info_box, timestamp_id, report_irx_issue
 )
 from irx.view import ViewManager
 
@@ -50,6 +51,7 @@ class ReadingManager:
         self.schedule_key_actions = []
         self.help_menu_items = []
         self.irx_specific_shortcuts = []
+        self.error_pool = ""
 
         addHook("profileLoaded", self.onProfileLoaded)
         addHook("reset", self.restore_view)
@@ -68,6 +70,7 @@ class ReadingManager:
 
         self.copy_missing_files()
         self.load_irx_container_deck()
+        self.attach_irx_error_handler()
 
         if not mw.col.models.byName(self.settings["modelName"]):
             self.setup_irx_model()
@@ -97,6 +100,9 @@ class ReadingManager:
                 "IR3X::Options", "Clean History",
                 lambda: self.textManager.clean_history(notify=True)
             )
+            addMenuItem(
+                "IR3X::Options", "Report Issue", report_irx_issue)
+
             if self.settings.get('isDev', False):
                 addMenuItem("IR3X::Developer", "Organizer", self.scheduler.show_organizer)
                 addMenuItem("IR3X::Developer", "Update Model", self.setup_irx_model)
@@ -116,6 +122,29 @@ class ReadingManager:
         self.monkey_patch_other_addons()
         self.create_getting_started_deck()
         irx_info_box('firstTimeOpening')
+
+
+    def attach_irx_error_handler(self):
+        _eh_write = mw.errorHandler.write
+        def intercept_err(data, _orig):
+            if mw.readingManagerX.settings.get('useIrxErrorHandler', False):
+                if not isinstance(data, unicode):
+                    data = unicode(data, "utf8", "replace")
+                mw.readingManagerX.error_pool += data
+            _orig(data)
+        mw.errorHandler.write = lambda data, orig=_eh_write: intercept_err(data, orig)
+
+        _eh_oTo = mw.errorHandler.onTimeout
+        def catch_err(_orig):
+            trace_back = mw.readingManagerX.error_pool
+            mw.readingManagerX.error_pool = ""
+            if mw.readingManagerX.settings.get('useIrxErrorHandler', False) and trace_back.find("irx") >=0 and trace_back.find("report_irx_issue") < 0:
+                mw.errorHandler.pool = ""
+                mw.progress.clear()
+                report_irx_issue(trace_back)
+            else:
+                _orig()
+        mw.errorHandler.onTimeout = lambda orig=_eh_oTo: catch_err(orig)
 
     def first_time_answer_info(self):
         if viewingIrxText():

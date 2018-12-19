@@ -31,7 +31,10 @@ from aqt.utils import getText, showInfo, tooltip
 
 from BeautifulSoup import BeautifulSoup as bs, Tag as bs_tag
 
-from irx.util import getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, rgba_percent_to_decimal_alpha, compress_image, irx_info_box
+from irx.util import (
+    getField, setField, db_log, irx_siblings, pretty_date, timestamp_id, 
+    rgba_percent_to_decimal_alpha, compress_image, irx_info_box
+)
 
 
 class TextManager:
@@ -193,7 +196,7 @@ class TextManager:
 
         def key_handler(evt, _orig):
             key = unicode(evt.text())
-            if key == self.user_controls_config["image_manager"]["toggle help"] or key in [k for k in self.user_controls_config["reviewer"]["show help"].split(" ") if len(k) == 1]:
+            if key == self.user_controls_config["image_manager"]["toggle controls"] or key in [k for k in self.user_controls_config["reviewer"]["show controls"].split(" ") if len(k) == 1]:
                 selected = self.image_list_widget.selectedItems()
                 if len(selected) == 1:
                     if image_label.isHidden():
