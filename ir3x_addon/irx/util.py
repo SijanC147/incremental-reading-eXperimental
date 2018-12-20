@@ -9,6 +9,7 @@ import stat
 import time
 import re
 import platform
+import cgi
 from math import ceil
 from datetime import datetime
 import struct
@@ -17,7 +18,7 @@ from PyQt4.QtCore import Qt, QBuffer, QEvent, QTimer, QUrl
 from PyQt4.QtGui import (
     QAction, QKeySequence, QMenu, QShortcut, QLineEdit, QImage, QPixmap,
     QLabel, QColor, QColorDialog, QApplication, QMessageBox, QPushButton, QShowEvent, 
-    QDialog, QVBoxLayout, QTextEdit, QDesktopServices, QClipboard, QHBoxLayout
+    QDialog, QVBoxLayout, QTextEdit, QDesktopServices, QClipboard, QHBoxLayout, QLayout
 )
 
 from anki import version as anki_version
@@ -134,12 +135,12 @@ def report_irx_issue(trace_back=None):
     form_layout = QVBoxLayout()
     desc_label = QLabel("Problem Description")
     desc_input = QTextEdit("What was going on when this happened?")
-    desc_input.setFixedSize(200,150)
+    desc_input.setFixedSize(300,125)
     desc_input.focusInEvent = lambda evt: desc_input.selectAll()
     specs_label = QLabel("System Info")
     specs_input = QTextEdit()
     specs_input.setHtml("<b>Platform:</b> {0}<br/> <b>Anki</b>: {1}<br/>".format(platform.platform(), anki_version))
-    specs_input.setFixedSize(200, 75)
+    specs_input.setFixedSize(300, 75)
     form_layout.addWidget(desc_label)
     form_layout.addWidget(desc_input)
     form_layout.addWidget(specs_label)
@@ -147,8 +148,8 @@ def report_irx_issue(trace_back=None):
     if trace_back:
         trace_back_label = QLabel("Traceback")
         trace_back_input = QTextEdit()
-        trace_back_input.setHtml(trace_back.replace("\n", "<br/>"))
-        trace_back_input.setFixedSize(200,150)
+        trace_back_input.setHtml(cgi.escape(trace_back).replace("\n", "<br/>"))
+        trace_back_input.setFixedSize(300,175)
         form_layout.addWidget(trace_back_label)
         form_layout.addWidget(trace_back_input)
 
@@ -172,6 +173,7 @@ def report_irx_issue(trace_back=None):
 
     parent_layout.addLayout(display_layout)
     parent_layout.addLayout(form_layout)
+    parent_layout.setSizeConstraint(QLayout.SetFixedSize)
 
     report_dialog.setLayout(parent_layout)
     desc_input.setFocus(Qt.ActiveWindowFocusReason)
@@ -181,8 +183,8 @@ def report_irx_issue(trace_back=None):
         clipboard = QApplication.clipboard()
         issue_str = ISSUE_TEMPLATE.format(
             desc=desc_input.toPlainText() or "",
-            specs=specs_input.toPlainText(),
-            trace_back=(trace_back_input.toPlainText() if trace_back else "Not Applicable")
+            specs=specs_input.toPlainText() or "",
+            trace_back=(trace_back_input.toPlainText() if trace_back else "")
         )
         if not trace_back:
             issue_str = issue_str[:issue_str.index("\n### Traceback")]

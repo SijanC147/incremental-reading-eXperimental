@@ -611,6 +611,7 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             soup = bs(mime_data.html())
+            db_log(mime_data.html())
             soup_imgs = soup.findAll('img')
             if soup_imgs:
                 progress = QProgressDialog("Getting images from clipboard", "Cancel", 1, len(soup_imgs), mw)
@@ -644,14 +645,21 @@ class TextManager:
                     img_data = urllib2.urlopen(media_path).read()
                 except ValueError:
                     try:
-                        if media_path[:2] == "//":
-                            media_path = "http:" + media_path
-                        else:
-                            media_path = "http://" + media_path
+                        media_path = "http:" + ("//" if not media_path.startswith("//") else "") + media_path
                         img_data = urllib2.urlopen(media_path).read()
-                    except urllib2.URLError as url_exception:
+                    except Exception as url_exception:
                         tooltip(
-                            "There was a problem getting {}:\n {}".format(
+                            "There was a problem getting {0}:\n {1}".format(
+                                media_path, url_exception
+                            )
+                        )
+                        continue
+                except urllib2.URLError as url_exception:
+                    try:
+                        img_data = urllib2.urlopen(urllib2.unquote(media_path)).read()
+                    except Exception as url_exception:
+                        tooltip(
+                            "There was a problem getting {0}:\n {1}".format(
                                 media_path, url_exception
                             )
                         )
@@ -665,6 +673,12 @@ class TextManager:
                             image_captions = tmp_image_captions + image_captions[len(tmp_image_captions)-1:]
                         else:
                             image_captions = tmp_image_captions
+                else:
+                    tooltip(
+                        "There was a problem getting {}".format(
+                            media_path,
+                        )
+                    )
                 if progress.wasCanceled():
                     break;
             if soup_imgs:
