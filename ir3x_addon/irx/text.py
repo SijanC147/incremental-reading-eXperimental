@@ -369,9 +369,10 @@ class TextManager:
                 text = text.replace(path, media_name)
 
         setField(new_note, self.settings["textField"], text)
+        parent_images = getField(current_note, self.settings["imagesField"])
         setField(
             new_note, self.settings["imagesField"],
-            getField(current_note, self.settings["imagesField"])
+            parent_images if not bs(parent_images).find("img", {"class": "irx-images-empty"}) else ""
         )
         setField(
             new_note, self.settings["sourceField"],
