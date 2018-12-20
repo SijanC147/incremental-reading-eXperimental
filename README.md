@@ -33,7 +33,7 @@ Below are some examples of the functionality provided by the add-on
 * [Creating extracts with direct links](https://i.imgur.com/GTdrfFz.gif)
 * [Undo operation with note deletion](https://i.imgur.com/TQv6Lo4.gif)
 * [Adding new schedules](https://i.imgur.com/DIzaxH8.gif)
-
+* [Importing images from the clipboard](https://i.imgur.com/vMce3bT.gif)
 
 ## Support
 The add-on includes a custom issue reporter which can be used to log any issues you encounter. The main advantage of using the issue reporter is that it auto-formats your issues to conform to a standard template, while also including any error and platform information automatically. The issue reporter will not post anything, it will simply copy the formatted issue to your clipboard and open the issues page on this repo. You are still required to paste in thie information and finally submit the issue. 
