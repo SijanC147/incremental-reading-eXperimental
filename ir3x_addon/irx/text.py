@@ -407,7 +407,7 @@ class TextManager:
         else:
             setField(
                 new_note, self.settings["titleField"],
-                self._next_version_number(current_note)
+                "{0} {1}".format(self._next_version_number(current_note), getField(current_note, self.settings["titleField"]))
             )
             highlight = True
 
