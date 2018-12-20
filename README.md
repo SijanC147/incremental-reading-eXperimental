@@ -29,10 +29,10 @@ Below are some examples of the functionality provided by the add-on
 
 * [Extracting images from a note](https://i.imgur.com/25L9O4e.gif)
 * [Toggling different overlays](https://i.imgur.com/JUbM4ax.gif)
-* [Moving and editing extracted images](https://i.imgur.com/jlhICSP.gifv)
-* [Creating extracts with direct links](https://i.imgur.com/GTdrfFz.gifv)
-* [Undo operation with note deletion](https://i.imgur.com/TQv6Lo4.gifv)
-* [Adding new schedules](https://i.imgur.com/DIzaxH8.gifv)
+* [Moving and editing extracted images](https://i.imgur.com/jlhICSP.gif)
+* [Creating extracts with direct links](https://i.imgur.com/GTdrfFz.gif)
+* [Undo operation with note deletion](https://i.imgur.com/TQv6Lo4.gif)
+* [Adding new schedules](https://i.imgur.com/DIzaxH8.gif)
 
 
 ## Support
