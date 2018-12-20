@@ -8,6 +8,7 @@ function setupIrx() {
     toggleHighlights(true, true);
     toggleImagesSidebar(true, true);
     toggleRemoved(false, true);
+    placeEmptyImagesPlaceholder();
 }
 
 function fixIrxImageLinks() {
@@ -21,6 +22,16 @@ function irxOnImgError(image) {
     image.onerror = "";
     image.src = "_irx_img_fallback.png";
     return true;
+}
+
+function placeEmptyImagesPlaceholder() {
+    irxImagesDiv = document.getElementsByClassName("irx-images").item(0);
+    if (irxImagesDiv.childElementCount == 0) {
+        placeholder = document.createElement("img");
+        placeholder.src = "_irx_images_empty.png";
+        placeholder.setAttribute("class", "irx-images-empty")
+        irxImagesDiv.innerHTML = placeholder.outerHTML;
+    }
 }
 
 function setupIrxHudBar() {

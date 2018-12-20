@@ -154,12 +154,19 @@ div.irx-content {
     margin-right: auto;
     margin-bottom: 3px;
 }
+.irx-images img.irx-images-empty {
+    opacity: 0.5;
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);	
+    transform: translateY(-50%);
+}
 
-.irx-images img:not([src^="_irx_img_fallback"]) {
+.irx-images img:not([src^="_irx_img_fallback"]):not(.irx-images-empty) {
     box-shadow: 0px 0px 8px 0px rgba(0,0,0,.1);
 }
 
-.irx-images img:not([src^="_irx_img_fallback"]):hover {
+.irx-images img:not([src^="_irx_img_fallback"]):not(.irx-images-empty):hover {
     box-shadow: 0px 0px 8px 0px rgba(0,0,0,.1);
     cursor: pointer;
     -webkit-transform: scale(1.01,1.01);
