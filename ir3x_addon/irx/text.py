@@ -611,7 +611,6 @@ class TextManager:
         image = mime_data.imageData()
         if not image:
             soup = bs(mime_data.html())
-            db_log(mime_data.html())
             soup_imgs = soup.findAll('img')
             if soup_imgs:
                 progress = QProgressDialog("Getting images from clipboard", "Cancel", 1, len(soup_imgs), mw)
